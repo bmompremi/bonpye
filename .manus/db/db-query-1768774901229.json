@@ -1,0 +1,55 @@
+{
+  "query": "SELECT p.id, p.content, p.createdAt, u.name, u.handle FROM posts p LEFT JOIN users u ON p.userId = u.id ORDER BY p.createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3FzMuzVHxrmBzUG.root --database 4qMt3X6YDoCejKH5pA9cdj --execute SELECT p.id, p.content, p.createdAt, u.name, u.handle FROM posts p LEFT JOIN users u ON p.userId = u.id ORDER BY p.createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "180001",
+      "content": "Just finished a 600-mile haul from Dallas to Phoenix. Beautiful sunset over the desert tonight! 🚛 #TruckerLife #OTR",
+      "createdAt": "2026-01-18 22:20:42",
+      "name": "bob Jerry mompremier",
+      "handle": "NULL"
+    },
+    {
+      "id": "150001",
+      "content": " ",
+      "createdAt": "2026-01-16 01:23:23",
+      "name": "bob Jerry mompremier",
+      "handle": "NULL"
+    },
+    {
+      "id": "120001",
+      "content": "hello, trucker cluster whatsapp group. ",
+      "createdAt": "2026-01-15 21:40:22",
+      "name": "bob Jerry mompremier",
+      "handle": "NULL"
+    },
+    {
+      "id": "90001",
+      "content": "hello, trucker cluster whatsapp group. ",
+      "createdAt": "2026-01-13 12:32:28",
+      "name": "bob Jerry mompremier",
+      "handle": "NULL"
+    },
+    {
+      "id": "60001",
+      "content": " ",
+      "createdAt": "2026-01-13 01:13:37",
+      "name": "bob Jerry mompremier",
+      "handle": "NULL"
+    },
+    {
+      "id": "30001",
+      "content": "Bonpye for ever",
+      "createdAt": "2026-01-13 00:40:25",
+      "name": "bob Jerry mompremier",
+      "handle": "NULL"
+    }
+  ],
+  "messages": [
+    "1\thello this is my first post ",
+    "\t2026-01-12 23:45:45\tbob Jerry mompremier\tNULL"
+  ],
+  "stdout": "id\tcontent\tcreatedAt\tname\thandle\n180001\tJust finished a 600-mile haul from Dallas to Phoenix. Beautiful sunset over the desert tonight! 🚛 #TruckerLife #OTR\t2026-01-18 22:20:42\tbob Jerry mompremier\tNULL\n150001\t \t2026-01-16 01:23:23\tbob Jerry mompremier\tNULL\n120001\thello, trucker cluster whatsapp group. \t2026-01-15 21:40:22\tbob Jerry mompremier\tNULL\n90001\thello, trucker cluster whatsapp group. \t2026-01-13 12:32:28\tbob Jerry mompremier\tNULL\n60001\t \t2026-01-13 01:13:37\tbob Jerry mompremier\tNULL\n30001\tBonpye for ever\t2026-01-13 00:40:25\tbob Jerry mompremier\tNULL\n1\thello this is my first post \n\t2026-01-12 23:45:45\tbob Jerry mompremier\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 90
+}

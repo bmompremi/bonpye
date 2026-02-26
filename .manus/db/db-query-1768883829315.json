@@ -1,0 +1,9 @@
+{
+  "query": "SELECT id, name, handle, email, createdAt FROM users WHERE name LIKE '%Ellie%' OR handle LIKE '%Ellie%' OR email LIKE '%ellie%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3FzMuzVHxrmBzUG.root --database 4qMt3X6YDoCejKH5pA9cdj --execute SELECT id, name, handle, email, createdAt FROM users WHERE name LIKE '%Ellie%' OR handle LIKE '%Ellie%' OR email LIKE '%ellie%';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 373
+}

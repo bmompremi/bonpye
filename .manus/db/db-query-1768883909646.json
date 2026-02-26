@@ -1,0 +1,180 @@
+{
+  "query": "SELECT * FROM notifications ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3FzMuzVHxrmBzUG.root --database 4qMt3X6YDoCejKH5pA9cdj --execute SELECT * FROM notifications ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "90012",
+      "userId": "420073",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "12",
+      "read": "0",
+      "createdAt": "2026-01-19 18:52:12"
+    },
+    {
+      "id": "90011",
+      "userId": "420065",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "11",
+      "read": "0",
+      "createdAt": "2026-01-19 18:51:40"
+    },
+    {
+      "id": "90010",
+      "userId": "420065",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "10",
+      "read": "0",
+      "createdAt": "2026-01-19 18:51:33"
+    },
+    {
+      "id": "90009",
+      "userId": "420065",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "9",
+      "read": "0",
+      "createdAt": "2026-01-19 18:51:29"
+    },
+    {
+      "id": "90008",
+      "userId": "420031",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "8",
+      "read": "0",
+      "createdAt": "2026-01-19 18:50:57"
+    },
+    {
+      "id": "90007",
+      "userId": "420031",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "7",
+      "read": "0",
+      "createdAt": "2026-01-19 18:50:54"
+    },
+    {
+      "id": "90006",
+      "userId": "450001",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "6",
+      "read": "0",
+      "createdAt": "2026-01-19 18:31:03"
+    },
+    {
+      "id": "90005",
+      "userId": "450001",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "5",
+      "read": "0",
+      "createdAt": "2026-01-19 18:08:25"
+    },
+    {
+      "id": "90004",
+      "userId": "450001",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "4",
+      "read": "0",
+      "createdAt": "2026-01-19 18:08:20"
+    },
+    {
+      "id": "90003",
+      "userId": "420073",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "3",
+      "read": "0",
+      "createdAt": "2026-01-19 17:50:59"
+    },
+    {
+      "id": "90002",
+      "userId": "420073",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "2",
+      "read": "0",
+      "createdAt": "2026-01-19 17:50:40"
+    },
+    {
+      "id": "90001",
+      "userId": "420073",
+      "type": "message",
+      "actorId": "1",
+      "postId": "NULL",
+      "messageId": "1",
+      "read": "0",
+      "createdAt": "2026-01-19 17:50:36"
+    },
+    {
+      "id": "60001",
+      "userId": "420073",
+      "type": "like",
+      "actorId": "1",
+      "postId": "210004",
+      "messageId": "NULL",
+      "read": "0",
+      "createdAt": "2026-01-19 10:03:03"
+    },
+    {
+      "id": "30003",
+      "userId": "420065",
+      "type": "like",
+      "actorId": "1",
+      "postId": "240001",
+      "messageId": "NULL",
+      "read": "0",
+      "createdAt": "2026-01-19 01:08:02"
+    },
+    {
+      "id": "30002",
+      "userId": "1",
+      "type": "like",
+      "actorId": "420065",
+      "postId": "210003",
+      "messageId": "NULL",
+      "read": "0",
+      "createdAt": "2026-01-19 01:01:17"
+    },
+    {
+      "id": "30001",
+      "userId": "1",
+      "type": "repost",
+      "actorId": "420065",
+      "postId": "210003",
+      "messageId": "NULL",
+      "read": "0",
+      "createdAt": "2026-01-19 01:01:16"
+    },
+    {
+      "id": "1",
+      "userId": "420073",
+      "type": "like",
+      "actorId": "1",
+      "postId": "210004",
+      "messageId": "NULL",
+      "read": "0",
+      "createdAt": "2026-01-18 23:57:05"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\ttype\tactorId\tpostId\tmessageId\tread\tcreatedAt\n90012\t420073\tmessage\t1\tNULL\t12\t0\t2026-01-19 18:52:12\n90011\t420065\tmessage\t1\tNULL\t11\t0\t2026-01-19 18:51:40\n90010\t420065\tmessage\t1\tNULL\t10\t0\t2026-01-19 18:51:33\n90009\t420065\tmessage\t1\tNULL\t9\t0\t2026-01-19 18:51:29\n90008\t420031\tmessage\t1\tNULL\t8\t0\t2026-01-19 18:50:57\n90007\t420031\tmessage\t1\tNULL\t7\t0\t2026-01-19 18:50:54\n90006\t450001\tmessage\t1\tNULL\t6\t0\t2026-01-19 18:31:03\n90005\t450001\tmessage\t1\tNULL\t5\t0\t2026-01-19 18:08:25\n90004\t450001\tmessage\t1\tNULL\t4\t0\t2026-01-19 18:08:20\n90003\t420073\tmessage\t1\tNULL\t3\t0\t2026-01-19 17:50:59\n90002\t420073\tmessage\t1\tNULL\t2\t0\t2026-01-19 17:50:40\n90001\t420073\tmessage\t1\tNULL\t1\t0\t2026-01-19 17:50:36\n60001\t420073\tlike\t1\t210004\tNULL\t0\t2026-01-19 10:03:03\n30003\t420065\tlike\t1\t240001\tNULL\t0\t2026-01-19 01:08:02\n30002\t1\tlike\t420065\t210003\tNULL\t0\t2026-01-19 01:01:17\n30001\t1\trepost\t420065\t210003\tNULL\t0\t2026-01-19 01:01:16\n1\t420073\tlike\t1\t210004\tNULL\t0\t2026-01-18 23:57:05\n",
+  "stderr": "",
+  "execution_time_ms": 364
+}

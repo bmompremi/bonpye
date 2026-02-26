@@ -1,0 +1,58 @@
+{
+  "query": "SELECT id, name, handle, email, createdAt, lastSignedIn FROM users ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3FzMuzVHxrmBzUG.root --database 4qMt3X6YDoCejKH5pA9cdj --execute SELECT id, name, handle, email, createdAt, lastSignedIn FROM users ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "1020001",
+      "name": "Saint julien Elie",
+      "handle": "NULL",
+      "email": "eliesaintjulien78@gmail.com",
+      "createdAt": "2026-01-20 00:36:08",
+      "lastSignedIn": "2026-01-20 04:33:33"
+    },
+    {
+      "id": "450001",
+      "name": "Lusny Mompremier",
+      "handle": "NULL",
+      "email": "mompremierlusny@gmail.com",
+      "createdAt": "2026-01-19 00:58:33",
+      "lastSignedIn": "2026-01-19 15:01:37"
+    },
+    {
+      "id": "420073",
+      "name": "Michelet Edouard",
+      "handle": "NULL",
+      "email": "michelet.edouard98@gmail.com",
+      "createdAt": "2026-01-18 23:54:32",
+      "lastSignedIn": "2026-01-19 07:54:09"
+    },
+    {
+      "id": "420065",
+      "name": "Eom",
+      "handle": "NULL",
+      "email": "sqmpgtk47g@privaterelay.appleid.com",
+      "createdAt": "2026-01-18 23:53:40",
+      "lastSignedIn": "2026-01-19 01:55:52"
+    },
+    {
+      "id": "420031",
+      "name": "Wiljhery Saintil",
+      "handle": "NULL",
+      "email": "swildjery@gmail.com",
+      "createdAt": "2026-01-18 23:32:35",
+      "lastSignedIn": "2026-01-18 23:42:58"
+    },
+    {
+      "id": "1",
+      "name": "bjm",
+      "handle": "Trucker cluster ",
+      "email": "bobmcqif16@gmail.com",
+      "createdAt": "2026-01-12 23:24:53",
+      "lastSignedIn": "2026-01-20 04:30:25"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\thandle\temail\tcreatedAt\tlastSignedIn\n1020001\tSaint julien Elie\tNULL\teliesaintjulien78@gmail.com\t2026-01-20 00:36:08\t2026-01-20 04:33:33\n450001\tLusny Mompremier\tNULL\tmompremierlusny@gmail.com\t2026-01-19 00:58:33\t2026-01-19 15:01:37\n420073\tMichelet Edouard\tNULL\tmichelet.edouard98@gmail.com\t2026-01-18 23:54:32\t2026-01-19 07:54:09\n420065\tEom\tNULL\tsqmpgtk47g@privaterelay.appleid.com\t2026-01-18 23:53:40\t2026-01-19 01:55:52\n420031\tWiljhery Saintil\tNULL\tswildjery@gmail.com\t2026-01-18 23:32:35\t2026-01-18 23:42:58\n1\tbjm\tTrucker cluster \tbobmcqif16@gmail.com\t2026-01-12 23:24:53\t2026-01-20 04:30:25\n",
+  "stderr": "",
+  "execution_time_ms": 421
+}
