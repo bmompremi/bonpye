@@ -21,15 +21,48 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import {
+  Bell,
+  Bookmark,
+  Calendar,
+  Home,
+  LogOut,
+  MapPin,
+  MessageCircle,
+  PanelLeft,
+  Search,
+  Settings,
+  Shield,
+  Trophy,
+  User,
+  Users,
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: Home, label: "Feed", path: "/feed" },
+  { icon: Bell, label: "Notifications", path: "/notifications" },
+  { icon: MessageCircle, label: "Messages", path: "/messages" },
+  { icon: Bookmark, label: "Bookmarks", path: "/bookmarks" },
+  { icon: Users, label: "Squads", path: "/squads" },
+  { icon: Trophy, label: "Clubs", path: "/clubs" },
+  { icon: Calendar, label: "Matches", path: "/matches" },
+  { icon: Search, label: "Scouting", path: "/scouting" },
+  { icon: MapPin, label: "Grounds", path: "/grounds" },
+  { icon: User, label: "Profile", path: "/profile" },
+  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Shield, label: "Admin", path: "/admin" },
+];
+
+const bottomNavItems = [
+  { icon: Home, label: "Home", path: "/feed" },
+  { icon: Search, label: "Explore", path: "/explore" },
+  { icon: MessageCircle, label: "Messages", path: "/messages" },
+  { icon: Bell, label: "Alerts", path: "/notifications" },
+  { icon: User, label: "Profile", path: "/profile" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -153,7 +186,7 @@ function DashboardLayoutContent({
 
   return (
     <>
-      <div className="relative" ref={sidebarRef}>
+      <div className={`relative ${isMobile ? "hidden" : ""}`} ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
           className="border-r-0"
@@ -170,8 +203,9 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                  <img src="/images/bonpye_logo.gif" alt="BONPYE" className="h-6 w-6 object-contain" />
+                  <span className="font-display font-bold tracking-wider truncate">
+                    BONPYE
                   </span>
                 </div>
               ) : null}
@@ -257,8 +291,29 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className={`flex-1 p-4 ${isMobile ? "pb-24" : ""}`}>{children}</main>
       </SidebarInset>
+
+      {/* Fixed Mobile Bottom Navigation */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border flex items-center justify-around h-16 px-2 safe-area-pb">
+          {bottomNavItems.map(item => {
+            const isActive = location === item.path;
+            return (
+              <button
+                key={item.path}
+                onClick={() => setLocation(item.path)}
+                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
+                  isActive ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <item.icon className={`h-5 w-5 ${isActive ? "fill-current" : ""}`} strokeWidth={isActive ? 2.5 : 1.8} />
+                <span className="text-[10px] font-medium leading-none">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </>
   );
 }

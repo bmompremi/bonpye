@@ -1,140 +1,50 @@
-/* TCsocial Explore/Search Page
- * Like Twitter/X explore with trending topics
+/* BONPYE Explore/Search Page
+ * Football trending topics and discovery
  */
 
-import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
   Heart,
   MessageCircle,
   Moon,
   MoreHorizontal,
   Repeat2,
   Search,
-  Settings,
   Sun,
   TrendingUp,
-  MapPin,
-  Truck,
   BarChart3,
   Bookmark,
-  Share,
+  User,
+  Loader2,
 } from "lucide-react";
+import LinkPreviewCard from "@/components/LinkPreviewCard";
 import { useState } from "react";
-import { Link } from "wouter";
-import { toast } from "sonner";
+import { useLocation } from "wouter";
 
-interface TrendingTopic {
-  id: number;
-  category: string;
-  topic: string;
-  posts: string;
-}
-
-interface Post {
-  id: number;
-  user: {
-    name: string;
-    handle: string;
-    avatar: string;
-    verified: boolean;
-  };
-  content: string;
-  image?: string;
-  timestamp: string;
-  likes: number;
-  reposts: number;
-  replies: number;
-  views: number;
-  liked?: boolean;
-}
-
-const trendingTopics: TrendingTopic[] = [
-  { id: 1, category: "Trucking · Trending", topic: "#FuelPrices", posts: "12.4K posts" },
-  { id: 2, category: "Industry · Trending", topic: "ELD Mandate", posts: "8.2K posts" },
-  { id: 3, category: "Weather · Trending", topic: "I-70 Closures", posts: "5.1K posts" },
-  { id: 4, category: "Trucking · Trending", topic: "#OwnerOperator", posts: "4.8K posts" },
-  { id: 5, category: "Business · Trending", topic: "Broker Rates", posts: "3.9K posts" },
-  { id: 6, category: "Lifestyle · Trending", topic: "#TruckerLife", posts: "15.2K posts" },
-  { id: 7, category: "Safety · Trending", topic: "DOT Inspections", posts: "2.1K posts" },
-  { id: 8, category: "Equipment · Trending", topic: "Peterbilt 579", posts: "1.8K posts" },
-];
-
-const trendingPosts: Post[] = [
-  {
-    id: 1,
-    user: {
-      name: "Trucker News",
-      handle: "truckernews",
-      avatar: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=100&h=100&fit=crop",
-      verified: true,
-    },
-    content: "🚨 BREAKING: Diesel prices drop 15 cents nationwide this week. First significant decrease in 3 months. What are you seeing at the pump? #FuelPrices #Trucking",
-    timestamp: "2h",
-    likes: 2847,
-    reposts: 892,
-    replies: 234,
-    views: 89000,
-  },
-  {
-    id: 2,
-    user: {
-      name: "Weather Watch OTR",
-      handle: "weatherwatch_otr",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
-      verified: true,
-    },
-    content: "⚠️ WINTER STORM WARNING: I-70 through Colorado expecting 8-12 inches tonight. Chain laws in effect. Consider alternate routes or staging. Stay safe out there drivers! #I70Closures",
-    image: "/images/hero_truck_night.jpg",
-    timestamp: "4h",
-    likes: 1523,
-    reposts: 1204,
-    replies: 89,
-    views: 125000,
-  },
-  {
-    id: 3,
-    user: {
-      name: "Load Board Tips",
-      handle: "loadboard_tips",
-      avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop",
-      verified: false,
-    },
-    content: "Broker rates are finally starting to climb in the Southeast. Seeing $2.80-3.20/mile on reefer loads out of Florida this week. About time! 📈 #BrokerRates #OwnerOperator",
-    timestamp: "6h",
-    likes: 956,
-    reposts: 445,
-    replies: 167,
-    views: 34000,
-  },
+const trendingTopics = [
+  { id: 1, category: "Football · Trending", topic: "#TransferWindow", posts: "52.4K posts" },
+  { id: 2, category: "Football · Trending", topic: "Champions League", posts: "128.2K posts" },
+  { id: 3, category: "Football · Trending", topic: "#MatchDay", posts: "45.1K posts" },
+  { id: 4, category: "Football · Trending", topic: "#PremierLeague", posts: "94.8K posts" },
+  { id: 5, category: "Football · Trending", topic: "Ballon d'Or", posts: "22.1K posts" },
 ];
 
 export default function Explore() {
   const { theme, toggleTheme } = useTheme();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("foryou");
-  const [posts, setPosts] = useState<Post[]>(trendingPosts);
+  const [activeTab, setActiveTab] = useState<"foryou" | "people">("foryou");
 
-  const handleComingSoon = () => {
-    toast("Feature coming soon!", {
-      description: "We're building this for the trucker community.",
-    });
-  };
+  // Real data from tRPC
+  const explorePosts = trpc.post.getExplore.useQuery({ limit: 20 });
+  const searchUsers = trpc.user.search.useQuery(
+    { query: searchQuery, limit: 10 },
+    { enabled: searchQuery.length >= 2 }
+  );
 
-  const handleLike = (postId: number) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          liked: !post.liked,
-          likes: post.liked ? post.likes - 1 : post.likes + 1,
-        };
-      }
-      return post;
-    }));
-  };
+  const isSearching = searchQuery.length >= 2;
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -146,256 +56,201 @@ export default function Explore() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border z-40">
-        <div className="flex items-center gap-4 p-4">
-          <Link href="/feed" className="p-2 rounded-full hover:bg-secondary transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          
+        <div className="flex items-center gap-3 p-3">
           {/* Search Bar */}
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search TCsocial"
-              className="w-full bg-secondary rounded-full py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Search BONPYE"
+              className="w-full bg-secondary rounded-full py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-
-          <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-secondary transition-colors">
+          <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-secondary transition-colors shrink-0">
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
-          <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors">
-            <Settings className="h-5 w-5" />
-          </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-border overflow-x-auto">
-          {[
-            { id: "foryou", label: "For you" },
-            { id: "trending", label: "Trending" },
-            { id: "news", label: "News" },
-            { id: "loads", label: "Loads" },
-            { id: "weather", label: "Weather" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-shrink-0 px-6 py-4 text-center font-medium transition-colors relative ${
-                activeTab === tab.id
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:bg-secondary/50"
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="exploreTab"
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-primary rounded-full"
-                />
-              )}
-            </button>
-          ))}
-        </div>
+        {!isSearching && (
+          <div className="flex border-b border-border">
+            {[
+              { id: "foryou", label: "For you" },
+              { id: "people", label: "Trending" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 py-3 text-center text-sm font-medium transition-colors relative ${
+                  activeTab === tab.id ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="exploreTab"
+                    className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
-      <div className="flex">
-        {/* Main Content */}
-        <div className="flex-1">
-          {/* Trending Topics */}
-          <div className="border-b border-border">
-            <div className="p-4">
-              <h2 className="font-bold text-xl flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Trending in Trucking
-              </h2>
+      {/* Search Results */}
+      {isSearching ? (
+        <div>
+          {searchUsers.isLoading && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            
-            {trendingTopics.slice(0, 5).map((topic, index) => (
-              <motion.button
-                key={topic.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={handleComingSoon}
-                className="w-full p-4 hover:bg-secondary/50 transition-colors text-left flex items-start justify-between"
-              >
-                <div>
-                  <p className="text-sm text-muted-foreground">{topic.category}</p>
-                  <p className="font-bold">{topic.topic}</p>
-                  <p className="text-sm text-muted-foreground">{topic.posts}</p>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleComingSoon(); }}
-                  className="p-2 rounded-full hover:bg-secondary transition-colors"
-                >
-                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </motion.button>
-            ))}
-            
-            <button
-              onClick={handleComingSoon}
-              className="w-full p-4 text-primary hover:bg-secondary/50 transition-colors text-left"
+          )}
+          {searchUsers.data?.length === 0 && !searchUsers.isLoading && (
+            <div className="p-8 text-center text-muted-foreground">
+              <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p>No results for "<strong>{searchQuery}</strong>"</p>
+            </div>
+          )}
+          {searchUsers.data?.map((user) => (
+            <motion.div
+              key={user.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => setLocation(`/profile/${user.handle}`)}
+              className="flex items-center gap-3 p-4 border-b border-border hover:bg-secondary/30 cursor-pointer"
             >
-              Show more
-            </button>
-          </div>
-
-          {/* Trending Posts */}
-          <div>
-            <div className="p-4 border-b border-border">
-              <h2 className="font-bold text-xl">What's happening</h2>
+              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name || ""} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold truncate">{user.name || user.handle}</p>
+                <p className="text-sm text-muted-foreground truncate">@{user.handle}</p>
+                {user.bio && <p className="text-sm text-muted-foreground truncate mt-0.5">{user.bio}</p>}
+              </div>
+              {user.playerVerified && (
+                <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full shrink-0">⚽ ✓</span>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      ) : activeTab === "foryou" ? (
+        /* Real Posts Feed */
+        <div>
+          {explorePosts.isLoading && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            
-            {posts.map((post, index) => (
-              <motion.article
-                key={post.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.05 }}
-                className="p-4 border-b border-border hover:bg-secondary/30 transition-colors cursor-pointer"
-              >
-                <div className="flex gap-3">
-                  <img
-                    src={post.user.avatar}
-                    alt={post.user.name}
-                    className="w-12 h-12 rounded-full flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    {/* Author Info */}
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span className="font-bold hover:underline">{post.user.name}</span>
-                      {post.user.verified && (
-                        <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded font-medium">
-                          CDL ✓
-                        </span>
-                      )}
-                      <span className="text-muted-foreground">@{post.user.handle}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span className="text-muted-foreground hover:underline">{post.timestamp}</span>
-                    </div>
-
-                    {/* Content */}
-                    <p className="mt-1 whitespace-pre-wrap">{post.content}</p>
-
-                    {/* Image */}
-                    {post.image && (
-                      <div className="mt-3 rounded-2xl overflow-hidden border border-border">
-                        <img
-                          src={post.image}
-                          alt="Post image"
-                          className="w-full max-h-[400px] object-cover"
-                        />
-                      </div>
+          )}
+          {explorePosts.data?.length === 0 && !explorePosts.isLoading && (
+            <div className="p-8 text-center text-muted-foreground">
+              <p>No posts yet. Be the first to post!</p>
+            </div>
+          )}
+          {explorePosts.data?.map((post, index) => (
+            <motion.article
+              key={post.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: index * 0.03 }}
+              className="p-4 border-b border-border hover:bg-secondary/30 transition-colors cursor-pointer"
+            >
+              <div className="flex gap-3">
+                <div
+                  onClick={() => post._author?.handle && setLocation(`/profile/${post._author.handle}`)}
+                  className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0 overflow-hidden cursor-pointer"
+                >
+                  {post._author?.avatar ? (
+                    <img src={post._author.avatar} alt={post._author.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button onClick={() => post._author?.handle && setLocation(`/profile/${post._author.handle}`)} className="font-bold text-sm hover:underline">
+                      {post._author?.name || "Player"}
+                    </button>
+                    {post._author?.verified && (
+                      <span className="bg-primary text-primary-foreground text-xs px-1 rounded">⚽</span>
                     )}
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-between mt-3 max-w-md">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleComingSoon(); }}
-                        className="flex items-center gap-1 text-muted-foreground hover:text-blue-500 transition-colors group"
-                      >
-                        <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                          <MessageCircle className="h-5 w-5" />
-                        </div>
-                        <span className="text-sm">{formatNumber(post.replies)}</span>
-                      </button>
-                      
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleComingSoon(); }}
-                        className="flex items-center gap-1 text-muted-foreground hover:text-green-500 transition-colors group"
-                      >
-                        <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                          <Repeat2 className="h-5 w-5" />
-                        </div>
-                        <span className="text-sm">{formatNumber(post.reposts)}</span>
-                      </button>
-                      
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleLike(post.id); }}
-                        className={`flex items-center gap-1 transition-colors group ${
-                          post.liked ? "text-primary" : "text-muted-foreground hover:text-primary"
-                        }`}
-                      >
-                        <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors">
-                          <Heart className={`h-5 w-5 ${post.liked ? "fill-current" : ""}`} />
-                        </div>
-                        <span className="text-sm">{formatNumber(post.likes)}</span>
-                      </button>
-                      
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleComingSoon(); }}
-                        className="flex items-center gap-1 text-muted-foreground hover:text-blue-500 transition-colors group"
-                      >
-                        <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                          <BarChart3 className="h-5 w-5" />
-                        </div>
-                        <span className="text-sm">{formatNumber(post.views)}</span>
-                      </button>
-                      
-                      <div className="flex">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleComingSoon(); }}
-                          className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          <Bookmark className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleComingSoon(); }}
-                          className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          <Share className="h-5 w-5" />
-                        </button>
-                      </div>
+                    <span className="text-muted-foreground text-sm">@{post._author?.handle || "player"}</span>
+                  </div>
+                  <p className="mt-1 text-sm whitespace-pre-wrap">
+                    {post.linkUrl ? post.content.replace(post.linkUrl, "").trim() : post.content}
+                  </p>
+                  {post.imageUrl && (
+                    <div className="mt-2 rounded-xl overflow-hidden border border-border">
+                      <img src={post.imageUrl} alt="Post" className="w-full max-h-72 object-cover" />
                     </div>
+                  )}
+                  {post.linkUrl && (
+                    <LinkPreviewCard
+                      url={post.linkUrl}
+                      title={post.linkTitle}
+                      description={post.linkDescription}
+                      image={post.linkImage}
+                      siteName={post.linkSiteName}
+                    />
+                  )}
+                  <div className="flex items-center justify-between mt-2 max-w-xs text-muted-foreground">
+                    <button className="flex items-center gap-1 hover:text-blue-500 transition-colors">
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="text-xs">{formatNumber(post.repliesCount || 0)}</span>
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-green-500 transition-colors">
+                      <Repeat2 className="h-4 w-4" />
+                      <span className="text-xs">{formatNumber(post.repostsCount || 0)}</span>
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-red-500 transition-colors">
+                      <Heart className="h-4 w-4" />
+                      <span className="text-xs">{formatNumber(post.likesCount || 0)}</span>
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-blue-400 transition-colors">
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="text-xs">{formatNumber(post.viewsCount || 0)}</span>
+                    </button>
+                    <button className="hover:text-primary transition-colors">
+                      <Bookmark className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-              </motion.article>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Sidebar - Who to follow */}
-        <div className="hidden lg:block w-80 p-4 border-l border-border">
-          <div className="bg-secondary/50 rounded-2xl p-4">
-            <h3 className="font-bold text-xl mb-4">Who to follow</h3>
-            
-            {[
-              { name: "Flatbed Nation", handle: "flatbed_nation", avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=100&h=100&fit=crop", verified: true },
-              { name: "Women in Trucking", handle: "womenintrucking", avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop", verified: true },
-              { name: "Trucker Tips Daily", handle: "truckertips", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop", verified: false },
-            ].map((user, index) => (
-              <div key={index} className="flex items-center gap-3 py-3">
-                <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold truncate flex items-center gap-1">
-                    {user.name}
-                    {user.verified && (
-                      <span className="bg-primary text-primary-foreground text-xs px-1 rounded">✓</span>
-                    )}
-                  </p>
-                  <p className="text-sm text-muted-foreground truncate">@{user.handle}</p>
-                </div>
-                <Button
-                  onClick={handleComingSoon}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full font-bold"
-                >
-                  Follow
-                </Button>
               </div>
-            ))}
-            
-            <button onClick={handleComingSoon} className="text-primary hover:underline text-sm mt-2">
-              Show more
-            </button>
-          </div>
+            </motion.article>
+          ))}
         </div>
-      </div>
+      ) : (
+        /* Trending Topics */
+        <div>
+          <div className="p-4 border-b border-border">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Trending in Football
+            </h2>
+          </div>
+          {trendingTopics.map((topic, index) => (
+            <motion.div
+              key={topic.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: index * 0.05 }}
+              className="p-4 border-b border-border hover:bg-secondary/30 cursor-pointer flex items-start justify-between"
+            >
+              <div>
+                <p className="text-xs text-muted-foreground">{topic.category}</p>
+                <p className="font-bold">{topic.topic}</p>
+                <p className="text-xs text-muted-foreground">{topic.posts}</p>
+              </div>
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground mt-1" />
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

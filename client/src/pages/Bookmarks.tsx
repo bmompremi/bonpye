@@ -1,5 +1,5 @@
-/* TCsocial Bookmarks Page
- * Like Twitter/X bookmarks
+/* BONPYE Bookmarks Page
+ * Like Twitter/X bookmarks - Football themed
  */
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
 interface Post {
@@ -45,12 +45,12 @@ const mockBookmarks: Post[] = [
   {
     id: 1,
     user: {
-      name: "Load Board Tips",
-      handle: "loadboard_tips",
+      name: "Training Ground",
+      handle: "trainingground",
       avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop",
       verified: true,
     },
-    content: "🔥 HOT TIP: Best lanes this week:\n\n• LA → Phoenix: $3.40/mi\n• Atlanta → Miami: $3.20/mi\n• Dallas → Houston: $2.90/mi\n• Chicago → Detroit: $3.10/mi\n\nBook em while they last! #LoadBoard #OwnerOperator",
+    content: "🔥 TOP DRILLS this week:\n\n• Tiki-taka passing triangles\n• 1v1 finishing under pressure\n• Box-to-box endurance runs\n• Set piece delivery practice\n\nMaster these and level up your game! ⚽💪 #FootballTraining #Skills",
     timestamp: "Dec 28",
     likes: 1247,
     reposts: 567,
@@ -61,12 +61,12 @@ const mockBookmarks: Post[] = [
   {
     id: 2,
     user: {
-      name: "Trucker Health",
-      handle: "truckerhealth",
+      name: "Football Nutrition",
+      handle: "footballnutrition",
       avatar: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=100&h=100&fit=crop",
       verified: true,
     },
-    content: "5 exercises you can do at the truck stop:\n\n1. Walk around your rig 10 times\n2. Resistance band pulls\n3. Step-ups on your trailer\n4. Stretches against the cab\n5. Jumping jacks\n\nYour health matters, drivers! 💪 #TruckerHealth",
+    content: "5 match day nutrition tips:\n\n1. Carb load 24hrs before kickoff\n2. Hydrate with electrolytes\n3. Light protein meal 3hrs pre-game\n4. Energy gel at half-time\n5. Recovery shake within 30min\n\nFuel your performance! 💪⚽ #FootballNutrition",
     timestamp: "Dec 25",
     likes: 3421,
     reposts: 1892,
@@ -77,12 +77,12 @@ const mockBookmarks: Post[] = [
   {
     id: 3,
     user: {
-      name: "DOT Inspector Mike",
-      handle: "dot_mike",
+      name: "Tactics Board",
+      handle: "tacticsboard_fc",
       avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop",
       verified: true,
     },
-    content: "Common inspection fails I see every day:\n\n❌ Tire tread depth\n❌ Brake adjustment\n❌ Lights not working\n❌ Unsecured cargo\n❌ Log violations\n\nDo your pre-trip! Save yourself the headache. #DOT #SafetyFirst",
+    content: "Common tactical mistakes I see every match:\n\n❌ Not pressing as a unit\n❌ Playing too narrow in attack\n❌ No movement off the ball\n❌ Ignoring the weak side\n❌ Failing to track back\n\nStudy the game! Football IQ wins matches. 🧠⚽ #Tactics #Football",
     timestamp: "Dec 20",
     likes: 5678,
     reposts: 3421,
@@ -94,11 +94,12 @@ const mockBookmarks: Post[] = [
 
 export default function Bookmarks() {
   const { theme, toggleTheme } = useTheme();
+  const [, setLocation] = useLocation();
   const [posts, setPosts] = useState<Post[]>(mockBookmarks);
 
   const handleComingSoon = () => {
     toast("Feature coming soon!", {
-      description: "We're building this for the trucker community.",
+      description: "We're building this for the football community.",
     });
   };
 
@@ -139,7 +140,7 @@ export default function Bookmarks() {
             </Link>
             <div>
               <h1 className="font-display text-xl font-bold">Bookmarks</h1>
-              <p className="text-sm text-muted-foreground">@bigmike_otr</p>
+              <p className="text-sm text-muted-foreground">Your saved posts</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -176,18 +177,19 @@ export default function Bookmarks() {
                 <img
                   src={post.user.avatar}
                   alt={post.user.name}
-                  className="w-12 h-12 rounded-full flex-shrink-0"
+                  className="w-12 h-12 rounded-full flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setLocation(`/profile/${post.user.handle}`)}
                 />
                 <div className="flex-1 min-w-0">
                   {/* Author Info */}
                   <div className="flex items-center gap-1 flex-wrap">
-                    <span className="font-bold hover:underline">{post.user.name}</span>
+                    <button onClick={() => setLocation(`/profile/${post.user.handle}`)} className="font-bold hover:underline">{post.user.name}</button>
                     {post.user.verified && (
                       <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded font-medium">
-                        CDL ✓
+                        ⚽ ✓
                       </span>
                     )}
-                    <span className="text-muted-foreground">@{post.user.handle}</span>
+                    <button onClick={() => setLocation(`/profile/${post.user.handle}`)} className="text-muted-foreground hover:underline">@{post.user.handle}</button>
                     <span className="text-muted-foreground">·</span>
                     <span className="text-muted-foreground hover:underline">{post.timestamp}</span>
                   </div>

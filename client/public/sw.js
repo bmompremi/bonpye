@@ -1,5 +1,5 @@
-const CACHE_NAME = 'tcsocial-v1';
-const RUNTIME_CACHE = 'tcsocial-runtime-v1';
+const CACHE_NAME = 'bonpye-v1';
+const RUNTIME_CACHE = 'bonpye-runtime-v1';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
@@ -14,6 +14,11 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // Never intercept auth routes — OAuth redirects must go directly to the server
+  if (url.pathname.startsWith('/api/auth/')) {
     return;
   }
 
@@ -66,16 +71,16 @@ self.addEventListener('push', (event) => {
     const { title, body, icon, badge, tag, data: notificationData } = data;
 
     const options = {
-      body: body || 'New message from TCsocial',
+      body: body || 'New message from BONPYE',
       icon: icon || '/favicon.ico',
       badge: badge || '/favicon.ico',
-      tag: tag || 'tcsocial-notification',
+      tag: tag || 'bonpye-notification',
       data: notificationData || {},
       requireInteraction: false,
     };
 
     event.waitUntil(
-      self.registration.showNotification(title || 'TCsocial', options)
+      self.registration.showNotification(title || 'BONPYE', options)
     );
   } catch (error) {
     console.error('Error handling push notification:', error);

@@ -1,8 +1,9 @@
-/* TCsocial Notifications Page
- * Like Twitter/X notifications
+/* BONPYE Notifications Page
+ * Real notifications from database with clickable user profiles
  */
 
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion } from "framer-motion";
 import {
@@ -10,154 +11,56 @@ import {
   Heart,
   MessageCircle,
   Moon,
-  MoreHorizontal,
   Repeat2,
   Settings,
   Sun,
   UserPlus,
   AtSign,
-  Truck,
+  Trophy,
+  MoreHorizontal,
+  Loader2,
+  Bell,
 } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
-interface Notification {
-  id: number;
-  type: "like" | "repost" | "follow" | "reply" | "mention";
-  user: {
-    name: string;
-    handle: string;
-    avatar: string;
-    verified: boolean;
-  };
-  content?: string;
-  postPreview?: string;
-  timestamp: string;
-  read: boolean;
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: 1,
-    type: "like",
-    user: {
-      name: "Sarah Wheels",
-      handle: "sarah_flatbed",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-      verified: true,
-    },
-    postPreview: "Just dropped a load in Phoenix after 2,400 miles...",
-    timestamp: "2m",
-    read: false,
-  },
-  {
-    id: 2,
-    type: "follow",
-    user: {
-      name: "Diesel Dan",
-      handle: "dieseldan_hauler",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
-      verified: false,
-    },
-    timestamp: "15m",
-    read: false,
-  },
-  {
-    id: 3,
-    type: "repost",
-    user: {
-      name: "Road Queen",
-      handle: "roadqueen_cdl",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-      verified: true,
-    },
-    postPreview: "New rig day! Finally upgraded to a 2024 Peterbilt 579...",
-    timestamp: "1h",
-    read: false,
-  },
-  {
-    id: 4,
-    type: "reply",
-    user: {
-      name: "Highway Harry",
-      handle: "highway_harry",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-      verified: true,
-    },
-    content: "That's a beautiful rig! What engine did you go with?",
-    postPreview: "New rig day! Finally upgraded to a 2024 Peterbilt 579...",
-    timestamp: "2h",
-    read: true,
-  },
-  {
-    id: 5,
-    type: "mention",
-    user: {
-      name: "Flatbed Frank",
-      handle: "flatbed_frank",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-      verified: false,
-    },
-    content: "@bigmike_otr you gotta check out this truck stop in Amarillo, best showers on I-40!",
-    timestamp: "3h",
-    read: true,
-  },
-  {
-    id: 6,
-    type: "like",
-    user: {
-      name: "Night Rider",
-      handle: "nightrider_otr",
-      avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop",
-      verified: true,
-    },
-    postPreview: "Week 3 on the road. Missing the family but the pay is good...",
-    timestamp: "5h",
-    read: true,
-  },
-  {
-    id: 7,
-    type: "follow",
-    user: {
-      name: "Mountain Mike",
-      handle: "mountain_mike",
-      avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
-      verified: false,
-    },
-    timestamp: "1d",
-    read: true,
-  },
-  {
-    id: 8,
-    type: "like",
-    user: {
-      name: "Trucker Tom",
-      handle: "trucker_tom",
-      avatar: "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=100&h=100&fit=crop",
-      verified: true,
-    },
-    postPreview: "Just dropped a load in Phoenix after 2,400 miles...",
-    timestamp: "1d",
-    read: true,
-  },
-];
-
 export default function Notifications() {
+  const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("all");
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
 
-  const handleComingSoon = () => {
-    toast("Feature coming soon!", {
-      description: "We're building this for the trucker community.",
-    });
-  };
+  // Fetch real notifications from database
+  const { data: notifications, isLoading, refetch } = trpc.notification.getAll.useQuery(
+    { limit: 50, offset: 0 },
+    { enabled: isAuthenticated }
+  );
+
+  // Unread count
+  const { data: unreadCount } = trpc.notification.getUnreadCount.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+
+  // Mark as read mutation
+  const markRead = trpc.notification.markRead.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  // Mark all as read when page loads
+  useEffect(() => {
+    if (isAuthenticated && unreadCount && unreadCount > 0) {
+      markRead.mutate();
+    }
+  }, [isAuthenticated, unreadCount]);
 
   const getIcon = (type: string) => {
     switch (type) {
       case "like":
-        return <Heart className="h-5 w-5 text-primary fill-primary" />;
+        return <Heart className="h-5 w-5 text-red-500 fill-red-500" />;
       case "repost":
         return <Repeat2 className="h-5 w-5 text-green-500" />;
       case "follow":
@@ -166,13 +69,15 @@ export default function Notifications() {
         return <MessageCircle className="h-5 w-5 text-blue-500" />;
       case "mention":
         return <AtSign className="h-5 w-5 text-primary" />;
+      case "message":
+        return <MessageCircle className="h-5 w-5 text-purple-500" />;
       default:
-        return <Heart className="h-5 w-5" />;
+        return <Bell className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
-  const getMessage = (notif: Notification) => {
-    switch (notif.type) {
+  const getMessage = (type: string) => {
+    switch (type) {
       case "like":
         return "liked your post";
       case "repost":
@@ -183,16 +88,49 @@ export default function Notifications() {
         return "replied to your post";
       case "mention":
         return "mentioned you";
+      case "message":
+        return "sent you a message";
       default:
         return "";
     }
   };
 
-  const filteredNotifications = activeTab === "all" 
-    ? notifications 
-    : activeTab === "verified"
-    ? notifications.filter(n => n.user.verified)
-    : notifications.filter(n => n.type === "mention");
+  const formatTime = (date: Date | string) => {
+    const now = new Date();
+    const d = new Date(date);
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "now";
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    return d.toLocaleDateString();
+  };
+
+  // Filter notifications based on active tab
+  const filteredNotifications = notifications
+    ? activeTab === "all"
+      ? notifications
+      : activeTab === "verified"
+      ? notifications.filter((n: any) => n.actorVerified)
+      : notifications.filter((n: any) => n.type === "mention")
+    : [];
+
+  const handleNotificationClick = (notif: any) => {
+    // Navigate based on notification type
+    if (notif.type === "follow") {
+      // Go to the follower's profile
+      setLocation(`/profile/${notif.actorHandle || notif.actorId}`);
+    } else if (notif.postId) {
+      // Go to the post/feed
+      setLocation(`/feed`);
+    } else if (notif.type === "message") {
+      setLocation(`/messages`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -209,7 +147,10 @@ export default function Notifications() {
             <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-secondary transition-colors">
               {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
-            <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors">
+            <button
+              onClick={() => toast("Settings coming soon!")}
+              className="p-2 rounded-full hover:bg-secondary transition-colors"
+            >
               <Settings className="h-5 w-5" />
             </button>
           </div>
@@ -243,74 +184,99 @@ export default function Notifications() {
         </div>
       </header>
 
-      {/* Notifications List */}
-      <div>
-        {filteredNotifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-            <Truck className="h-16 w-16 text-muted-foreground mb-4" />
-            <h2 className="font-bold text-xl mb-2">No notifications yet</h2>
-            <p className="text-muted-foreground max-w-sm">
-              When other drivers interact with your posts, you'll see it here.
-            </p>
-          </div>
-        ) : (
-          filteredNotifications.map((notif, index) => (
-            <motion.div
-              key={notif.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.03 }}
-              className={`p-4 border-b border-border hover:bg-secondary/30 transition-colors cursor-pointer ${
-                !notif.read ? "bg-primary/5" : ""
-              }`}
-            >
-              <div className="flex gap-3">
-                {/* Icon */}
-                <div className="w-10 flex justify-end">
-                  {getIcon(notif.type)}
-                </div>
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start gap-2">
-                    <img
-                      src={notif.user.avatar}
-                      alt={notif.user.name}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p>
-                        <span className="font-bold hover:underline">{notif.user.name}</span>
-                        {notif.user.verified && (
-                          <span className="ml-1 bg-primary text-primary-foreground text-xs px-1 rounded">CDL ✓</span>
+      {/* Notifications List */}
+      {!isLoading && (
+        <div>
+          {filteredNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <Trophy className="h-16 w-16 text-muted-foreground mb-4" />
+              <h2 className="font-bold text-xl mb-2">
+                {activeTab === "all"
+                  ? "No notifications yet"
+                  : activeTab === "verified"
+                  ? "No verified notifications"
+                  : "No mentions yet"}
+              </h2>
+              <p className="text-muted-foreground max-w-sm">
+                {activeTab === "all"
+                  ? "When other players interact with your posts, you'll see it here."
+                  : activeTab === "verified"
+                  ? "Notifications from verified players will appear here."
+                  : "When someone mentions you, it will show up here."}
+              </p>
+            </div>
+          ) : (
+            filteredNotifications.map((notif: any, index: number) => (
+              <motion.div
+                key={notif.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.03 }}
+                onClick={() => handleNotificationClick(notif)}
+                className={`p-4 border-b border-border hover:bg-secondary/30 transition-colors cursor-pointer active:bg-secondary/50 ${
+                  !notif.read ? "bg-primary/5" : ""
+                }`}
+              >
+                <div className="flex gap-3">
+                  {/* Icon */}
+                  <div className="w-10 flex justify-end pt-1">
+                    {getIcon(notif.type)}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2">
+                      {/* Avatar - clickable to profile */}
+                      <Link
+                        href={`/profile/${notif.actorHandle || notif.actorId}`}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      >
+                        <img
+                          src={notif.actorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${notif.actorId}`}
+                          alt={notif.actorName || "User"}
+                          className="w-10 h-10 rounded-full hover:opacity-80 transition-opacity"
+                        />
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <p>
+                          {/* Username - clickable to profile */}
+                          <Link
+                            href={`/profile/${notif.actorHandle || notif.actorId}`}
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            className="font-bold hover:underline"
+                          >
+                            {notif.actorName || "User"}
+                          </Link>
+                          {notif.actorVerified && (
+                            <span className="ml-1 bg-primary text-primary-foreground text-xs px-1 rounded">⚽ ✓</span>
+                          )}
+                          <span className="text-muted-foreground"> {getMessage(notif.type)}</span>
+                          <span className="text-muted-foreground"> · {formatTime(notif.createdAt)}</span>
+                        </p>
+
+                        {/* Post preview */}
+                        {notif.postContent && (
+                          <p className="mt-1 text-muted-foreground line-clamp-2 text-sm">
+                            {notif.postContent}
+                          </p>
                         )}
-                        <span className="text-muted-foreground"> {getMessage(notif)}</span>
-                        <span className="text-muted-foreground"> · {notif.timestamp}</span>
-                      </p>
-                      
-                      {notif.content && (
-                        <p className="mt-1 text-foreground">{notif.content}</p>
-                      )}
-                      
-                      {notif.postPreview && !notif.content && (
-                        <p className="mt-1 text-muted-foreground line-clamp-2">{notif.postPreview}</p>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      )}
 
-                {/* More button */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleComingSoon(); }}
-                  className="p-2 rounded-full hover:bg-secondary transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
     </div>
   );
 }

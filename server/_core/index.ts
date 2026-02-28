@@ -2,16 +2,16 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import multer from "multer";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
-import { sdk } from "./sdk";
 import { ENV } from "./env";
+import { SignJWT } from "jose";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -58,8 +58,103 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
+
+  // ── Google OAuth ────────────────────────────────────────────────────────────
+  app.get("/api/auth/google", (req, res) => {
+    const proto = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.headers["x-forwarded-host"] || req.headers.host;
+    const dynamicRedirectUri = `${proto}://${host}/api/auth/google/callback`;
+    const params = new URLSearchParams({
+      client_id: ENV.googleClientId,
+      redirect_uri: dynamicRedirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "select_account",
+    });
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  });
+
+  app.get("/api/auth/google/callback", async (req, res) => {
+    const code = req.query.code as string | undefined;
+    if (!code) {
+      return res.status(400).send("Missing authorization code");
+    }
+    try {
+      const proto = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["x-forwarded-host"] || req.headers.host;
+      const dynamicRedirectUri = `${proto}://${host}/api/auth/google/callback`;
+      // Exchange code for tokens
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: ENV.googleClientId,
+          client_secret: ENV.googleClientSecret,
+          redirect_uri: dynamicRedirectUri,
+          grant_type: "authorization_code",
+        }),
+      });
+      const tokens = await tokenRes.json() as any;
+      if (tokens.error) throw new Error(tokens.error_description || tokens.error);
+
+      // Get user profile
+      const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      const googleUser = await profileRes.json() as any;
+
+      // Upsert user in DB
+      const { upsertUser, getUserByOpenId } = await import("../db");
+      const openId = `google-${googleUser.id}`;
+      const emailHandle = googleUser.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9_]/g, "") ?? "player";
+
+      await upsertUser({
+        openId,
+        name: googleUser.name ?? null,
+        email: googleUser.email ?? null,
+        loginMethod: "google",
+        lastSignedIn: new Date(),
+        handle: emailHandle,
+        avatarUrl: googleUser.picture ?? null,
+      });
+
+      const user = await getUserByOpenId(openId);
+      if (!user) throw new Error("Failed to create user");
+
+      // Create JWT session
+      const secret = new TextEncoder().encode(ENV.cookieSecret || "bonpye-secret");
+      const token = await new SignJWT({
+        openId,
+        appId: ENV.appId || "bonpye",
+        name: googleUser.name || emailHandle,
+      })
+        .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+        .setIssuedAt()
+        .setExpirationTime("30d")
+        .sign(secret);
+
+      const COOKIE_NAME = "bonpye_session";
+      const maxAge = 30 * 24 * 60 * 60;
+      const cookieParts = [
+        `${COOKIE_NAME}=${token}`,
+        `Max-Age=${maxAge}`,
+        `Path=/`,
+        `SameSite=Lax`,
+        `HttpOnly`,
+      ];
+      if (ENV.isProduction) cookieParts.push(`Secure`);
+      const cookieHeader = cookieParts.join("; ");
+      res.setHeader("Set-Cookie", cookieHeader);
+      res.redirect("/feed");
+    } catch (err: any) {
+      console.error("[OAuth] Google callback error:", err);
+      res.redirect("/?error=oauth_failed");
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────────
+
 
   // File upload endpoint for videos (using multer instead of base64)
   const upload = multer({
@@ -95,6 +190,12 @@ async function startServer() {
       res.status(500).json({ error: error.message || "Upload failed" });
     }
   });
+  // Serve local uploads as static files
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
+    maxAge: "7d",
+    immutable: true,
+  }));
+
   // tRPC API
   app.use(
     "/api/trpc",

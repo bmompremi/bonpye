@@ -1,4 +1,4 @@
-/* TCsocial Home - Landing Page
+/* BONPYE Home - Landing Page
  * Like Twitter/X login page - simple and focused
  */
 
@@ -30,7 +30,7 @@ export default function Home() {
 
   const handleComingSoon = () => {
     toast("Feature coming soon!", {
-      description: "We're building this for the trucker community.",
+      description: "We're building this for the football community.",
     });
   };
 
@@ -43,7 +43,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Theme Toggle */}
       <button
         onClick={toggleTheme}
@@ -52,13 +52,13 @@ export default function Home() {
         {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </button>
 
-      <div className="min-h-screen flex flex-col lg:flex-row">
+      <div className="min-h-screen flex flex-col lg:flex-row w-full max-w-full">
         {/* Left Side - Hero Image/Logo */}
-        <div className="lg:w-1/2 flex items-center justify-center p-8 lg:p-16 bg-black relative overflow-hidden">
+        <div className="lg:w-1/2 flex items-center justify-center p-4 sm:p-8 lg:p-16 bg-black relative overflow-hidden min-h-[35vh] lg:min-h-screen">
           {/* Background Image */}
           <div 
             className="absolute inset-0 bg-cover bg-center opacity-30"
-            style={{ backgroundImage: "url('/images/hero_truck_night.jpg')" }}
+            style={{ backgroundImage: "url('/images/hero_football.jpg')" }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/40" />
           
@@ -67,29 +67,32 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="relative z-10"
+            className="relative z-10 flex flex-col items-center"
           >
-            <img 
-              src="/images/logo.png" 
-              alt="TCsocial" 
-              className="w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80"
+            <img
+              src="/images/bonpye_logo.gif"
+              alt="BONPYE"
+              className="w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 object-contain"
             />
+            <h2 className="font-display text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-widest mt-2">
+              BONPYE<sup className="text-xs sm:text-sm align-super">™</sup>
+            </h2>
           </motion.div>
         </div>
 
         {/* Right Side - Auth */}
-        <div className="lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
-          <div className="w-full max-w-md">
+        <div className="lg:w-1/2 flex items-center justify-center px-4 py-6 sm:p-8 lg:p-16 w-full overflow-hidden">
+          <div className="w-full max-w-md overflow-hidden">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h1 className="font-display text-5xl md:text-6xl font-bold mb-6">
-                Happening now
+              <h1 className="font-display text-2xl leading-tight sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 break-words">
+                Own your football identity.
               </h1>
-              <h2 className="font-display text-2xl md:text-3xl font-bold mb-8">
-                Join the trucker community today.
+              <h2 className="font-display text-base leading-tight sm:text-xl md:text-3xl font-bold mb-6 sm:mb-8 break-words">
+                Join the global football community on BONPYE.
               </h2>
 
               {/* Sign Up Options */}
@@ -153,6 +156,7 @@ export default function Home() {
                   Sign in
                 </Button>
               </div>
+
             </motion.div>
           </div>
         </div>
@@ -166,7 +170,7 @@ export default function Home() {
               {link}
             </button>
           ))}
-          <span>© 2026 TCsocial</span>
+          <span>© 2026 BONPYE</span>
         </div>
       </footer>
     </div>

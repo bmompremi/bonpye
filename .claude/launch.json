@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "BONPYE Dev",
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "export NVM_DIR=\"$HOME/.nvm\" && source \"$NVM_DIR/nvm.sh\" && pnpm dev"],
+      "port": 3000
+    }
+  ]
+}

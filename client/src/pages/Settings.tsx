@@ -1,4 +1,4 @@
-/* TCsocial Settings Page
+/* BONPYE Settings Page
  * Like Twitter/X settings
  */
 
@@ -23,7 +23,6 @@ import {
   Shield,
   Smartphone,
   Sun,
-  Truck,
   User,
   Volume2,
 } from "lucide-react";
@@ -44,8 +43,8 @@ const settingSections = [
     items: [
       { icon: User, label: "Account information", description: "See your account information like your phone number and email address." },
       { icon: Key, label: "Change your password", description: "Change your password at any time." },
-      { icon: Smartphone, label: "Download your data", description: "Get a copy of your TCsocial data." },
-      { icon: Truck, label: "CDL Verification", description: "Verify your CDL to get the verified badge." },
+      { icon: Smartphone, label: "Download your data", description: "Get a copy of your BONPYE data." },
+      { icon: Shield, label: "Player Verification", description: "Verify your player identity to get the verified badge." },
     ],
   },
   {
@@ -68,7 +67,7 @@ const settingSections = [
     title: "Notifications",
     items: [
       { icon: Bell, label: "Push notifications", description: "Manage your mobile and desktop notifications." },
-      { icon: Bell, label: "Email notifications", description: "Manage what emails you receive from TCsocial." },
+      { icon: Bell, label: "Email notifications", description: "Manage what emails you receive from BONPYE." },
     ],
   },
   {
@@ -81,7 +80,7 @@ const settingSections = [
   {
     title: "Additional resources",
     items: [
-      { icon: HelpCircle, label: "Help Center", description: "Get help with TCsocial." },
+      { icon: HelpCircle, label: "Help Center", description: "Get help with BONPYE." },
     ],
   },
 ];
@@ -94,7 +93,7 @@ export default function Settings() {
 
   const handleComingSoon = () => {
     toast("Feature coming soon!", {
-      description: "We're building this for the trucker community.",
+      description: "We're building this for the football community.",
     });
   };
 
@@ -213,9 +212,9 @@ export default function Settings() {
 
         {/* App Info */}
         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-          <img src="/images/logo.png" alt="TCsocial" className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p>TCsocial v1.0.0</p>
-          <p>By Drivers. For Drivers.</p>
+          <img src="/images/bonpye_logo.gif" alt="BONPYE" className="w-12 h-12 mx-auto mb-2 object-contain" />
+          <p>BONPYE v1.0.0</p>
+          <p>By Players. For Players.</p>
         </div>
       </div>
     </div>

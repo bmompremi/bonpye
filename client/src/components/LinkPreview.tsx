@@ -5,10 +5,19 @@
 
 import { useState } from "react";
 import { ExternalLink, Image as ImageIcon, Play, X } from "lucide-react";
+import LinkPreviewCard from "./LinkPreviewCard";
 
 interface LinkPreviewProps {
   text: string;
   className?: string;
+  // Server-fetched OG data stored with the post
+  ogData?: {
+    linkUrl?: string | null;
+    linkTitle?: string | null;
+    linkDescription?: string | null;
+    linkImage?: string | null;
+    linkSiteName?: string | null;
+  } | null;
 }
 
 // URL regex pattern
@@ -94,14 +103,19 @@ function getPlatformName(url: string): string {
   return getDomain(url);
 }
 
-export function LinkPreview({ text, className = "" }: LinkPreviewProps) {
+export function LinkPreview({ text, className = "", ogData }: LinkPreviewProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
+  // If we have OG data, strip the URL from displayed text so it doesn't show raw
+  const displayText = ogData?.linkUrl
+    ? text.replace(ogData.linkUrl, "").trim()
+    : text;
+
   // Split text by URLs and create elements
-  const parts = text.split(URL_REGEX);
-  const urls = text.match(URL_REGEX) || [];
+  const parts = displayText.split(URL_REGEX);
+  const urls = displayText.match(URL_REGEX) || [];
 
   // Render text with clickable links
   const renderContent = () => {
@@ -245,37 +259,24 @@ export function LinkPreview({ text, className = "" }: LinkPreviewProps) {
         </div>
       )}
 
-      {/* Facebook/Twitter/Other link preview card */}
-      {firstUrl && !firstUrlIsImage && !firstUrlIsVideo && !firstUrlIsYouTube && (
-        <a
-          href={firstUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 block border border-border rounded-xl overflow-hidden hover:bg-secondary/50 transition-colors"
-        >
-          {/* Rich preview with thumbnail */}
-          <div className="flex">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-secondary flex items-center justify-center">
-              <img 
-                src={getPlatformThumbnail(firstUrl)} 
-                alt="" 
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = getFaviconUrl(firstUrl);
-                  e.currentTarget.className = 'w-12 h-12 object-contain';
-                }}
-              />
-            </div>
-            <div className="flex-1 p-3 flex flex-col justify-center min-w-0">
-              <p className="text-sm font-medium truncate">{getPlatformName(firstUrl)}</p>
-              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{firstUrl}</p>
-              <div className="flex items-center gap-1 mt-2 text-xs text-primary">
-                <ExternalLink className="h-3 w-3" />
-                <span>Open link</span>
-              </div>
-            </div>
-          </div>
-        </a>
+      {/* OG preview card — uses server-fetched data when available */}
+      {ogData?.linkUrl && (
+        <LinkPreviewCard
+          url={ogData.linkUrl}
+          title={ogData.linkTitle}
+          description={ogData.linkDescription}
+          image={ogData.linkImage}
+          siteName={ogData.linkSiteName}
+        />
+      )}
+
+      {/* Fallback card for links without OG data (uses platform thumbnail) */}
+      {!ogData?.linkUrl && firstUrl && !firstUrlIsImage && !firstUrlIsVideo && !firstUrlIsYouTube && (
+        <LinkPreviewCard
+          url={firstUrl}
+          image={isYouTubeUrl(firstUrl) ? getPlatformThumbnail(firstUrl) : null}
+          siteName={getPlatformName(firstUrl)}
+        />
       )}
 
       {/* Full-screen image preview modal */}

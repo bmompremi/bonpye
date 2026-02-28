@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 import { InsertUser, users, pushSubscriptions } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -9,7 +10,8 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const sql = neon(process.env.DATABASE_URL);
+      _db = drizzle({ client: sql });
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -68,7 +70,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -92,7 +95,7 @@ export async function getUserByOpenId(openId: string) {
 // TODO: add feature queries here as your schema grows.
 
 import { desc, and, or, sql, inArray } from "drizzle-orm";
-import { 
+import {
   posts, InsertPost,
   likes,
   bookmarks,
@@ -101,8 +104,9 @@ import {
   conversationParticipants,
   messages,
   notifications, InsertNotification,
-  convoys,
-  convoyMembers
+  squads,
+  squadMembers,
+  callRecords, InsertCallRecord
 } from "../drizzle/schema";
 
 // ============ USER FUNCTIONS ============
@@ -138,10 +142,10 @@ export async function searchUsers(query: string, limit = 20) {
     handle: users.handle,
     avatarUrl: users.avatarUrl,
     bio: users.bio,
-    cdlVerified: users.cdlVerified,
+    playerVerified: users.playerVerified,
     email: users.email,
     location: users.location,
-    truckType: users.truckType,
+    position: users.position,
   }).from(users)
     .where(or(
       sql`LOWER(${users.name}) LIKE LOWER(${`%${query}%`})`,
@@ -156,8 +160,8 @@ export async function searchUsers(query: string, limit = 20) {
 export async function createPost(data: InsertPost) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(posts).values(data);
-  return result[0].insertId;
+  const result = await db.insert(posts).values(data).returning({ id: posts.id });
+  return result[0].id;
 }
 
 export async function getPostById(id: number) {
@@ -180,34 +184,38 @@ export async function getFeedPosts(userId: number, limit = 20, offset = 0) {
   
   const postsResult = await db.select()
     .from(posts)
-    .where(inArray(posts.userId, userIds))
+    .where(and(
+      inArray(posts.userId, userIds),
+      sql`${posts.replyToId} IS NULL`
+    ))
     .orderBy(desc(posts.createdAt))
     .limit(limit)
     .offset(offset);
-  
+
   // Fetch author info for each post
   const postsWithAuthors = await Promise.all(postsResult.map(async (post) => {
     const author = await getUserById(post.userId);
     return {
       ...post,
       _author: author ? {
-        name: author.name || 'Driver',
-        handle: author.handle || 'driver',
+        name: author.name || 'Player',
+        handle: author.handle || 'player',
         avatar: author.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
-        verified: author.cdlVerified || false,
+        verified: author.playerVerified || false,
       } : undefined
     };
   }));
-  
+
   return postsWithAuthors;
 }
 
 export async function getExplorePosts(limit = 20, offset = 0) {
   const db = await getDb();
   if (!db) return [];
-  
+
   const postsResult = await db.select()
     .from(posts)
+    .where(sql`${posts.replyToId} IS NULL`)
     .orderBy(desc(posts.createdAt))
     .limit(limit)
     .offset(offset);
@@ -218,14 +226,14 @@ export async function getExplorePosts(limit = 20, offset = 0) {
     return {
       ...post,
       _author: author ? {
-        name: author.name || 'Driver',
-        handle: author.handle || 'driver',
+        name: author.name || 'Player',
+        handle: author.handle || 'player',
         avatar: author.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
-        verified: author.cdlVerified || false,
+        verified: author.playerVerified || false,
       } : undefined
     };
   }));
-  
+
   return postsWithAuthors;
 }
 
@@ -244,6 +252,42 @@ export async function deletePost(postId: number, userId: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(posts).where(and(eq(posts.id, postId), eq(posts.userId, userId)));
+}
+
+export async function getPostReplies(postId: number, limit = 20, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const repliesResult = await db.select()
+    .from(posts)
+    .where(eq(posts.replyToId, postId))
+    .orderBy(posts.createdAt)
+    .limit(limit)
+    .offset(offset);
+
+  const repliesWithAuthors = await Promise.all(repliesResult.map(async (reply) => {
+    const author = await getUserById(reply.userId);
+    return {
+      ...reply,
+      _author: author ? {
+        name: author.name || 'Player',
+        handle: author.handle || 'player',
+        avatar: author.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+        verified: author.playerVerified || false,
+      } : undefined,
+    };
+  }));
+
+  return repliesWithAuthors;
+}
+
+export async function getExistingRepost(userId: number, postId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select({ id: posts.id }).from(posts).where(
+    and(eq(posts.userId, userId), eq(posts.repostOfId, postId))
+  ).limit(1);
+  return result[0] || null;
 }
 
 export async function incrementPostCount(postId: number, field: 'likesCount' | 'repostsCount' | 'repliesCount' | 'viewsCount') {
@@ -281,9 +325,10 @@ export async function unlikePost(userId: number, postId: number) {
   if (!db) return false;
   
   const result = await db.delete(likes)
-    .where(and(eq(likes.userId, userId), eq(likes.postId, postId)));
-  
-  if (result[0].affectedRows > 0) {
+    .where(and(eq(likes.userId, userId), eq(likes.postId, postId)))
+    .returning({ id: likes.id });
+
+  if (result.length > 0) {
     await decrementPostCount(postId, 'likesCount');
     return true;
   }
@@ -318,9 +363,10 @@ export async function unbookmarkPost(userId: number, postId: number) {
   if (!db) return false;
   
   const result = await db.delete(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId)));
-  
-  return result[0].affectedRows > 0;
+    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId)))
+    .returning({ id: bookmarks.id });
+
+  return result.length > 0;
 }
 
 export async function getUserBookmarks(userId: number, limit = 20, offset = 0) {
@@ -370,9 +416,10 @@ export async function unfollowUser(followerId: number, followingId: number) {
   if (!db) return false;
   
   const result = await db.delete(follows)
-    .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
-  
-  return result[0].affectedRows > 0;
+    .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+    .returning({ id: follows.id });
+
+  return result.length > 0;
 }
 
 export async function getFollowers(userId: number, limit = 20, offset = 0) {
@@ -460,8 +507,8 @@ export async function getOrCreateConversation(userId1: number, userId2: number) 
   }
   
   // Create new conversation
-  const [result] = await db.insert(conversations).values({});
-  const conversationId = result.insertId;
+  const [newConvo] = await db.insert(conversations).values({}).returning({ id: conversations.id });
+  const conversationId = newConvo.id;
   
   await db.insert(conversationParticipants).values([
     { conversationId, userId: userId1 },
@@ -471,23 +518,24 @@ export async function getOrCreateConversation(userId1: number, userId2: number) 
   return conversationId;
 }
 
-export async function sendMessage(conversationId: number, senderId: number, content: string, imageUrl?: string) {
+export async function sendMessage(conversationId: number, senderId: number, content: string, imageUrl?: string, videoUrl?: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  const [result] = await db.insert(messages).values({
+
+  const [newMsg] = await db.insert(messages).values({
     conversationId,
     senderId,
     content,
-    imageUrl
-  });
-  
+    imageUrl,
+    videoUrl,
+  }).returning({ id: messages.id });
+
   // Update conversation timestamp
   await db.update(conversations)
     .set({ updatedAt: new Date() })
     .where(eq(conversations.id, conversationId));
-  
-  return result.insertId;
+
+  return newMsg.id;
 }
 
 export async function getConversationMessages(conversationId: number, limit = 50, offset = 0) {
@@ -557,6 +605,93 @@ export async function getConversationParticipants(conversationId: number) {
     .where(inArray(users.id, participants.map(p => p.userId)));
 }
 
+// ============ CALL FUNCTIONS ============
+
+export async function createCallRecord(data: {
+  conversationId: number;
+  callerId: number;
+  receiverId: number;
+  type: "voice" | "video";
+  callerPeerId: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [record] = await db.insert(callRecords).values({
+    conversationId: data.conversationId,
+    callerId: data.callerId,
+    receiverId: data.receiverId,
+    type: data.type,
+    status: "ringing",
+    callerPeerId: data.callerPeerId,
+  }).returning();
+
+  return record;
+}
+
+export async function getIncomingCalls(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select()
+    .from(callRecords)
+    .where(and(
+      eq(callRecords.receiverId, userId),
+      eq(callRecords.status, "ringing")
+    ))
+    .orderBy(desc(callRecords.createdAt))
+    .limit(1);
+}
+
+export async function updateCallStatus(callId: number, status: "ringing" | "connected" | "ended" | "missed" | "declined" | "failed", startedAt?: Date) {
+  const db = await getDb();
+  if (!db) return;
+
+  const updateData: Record<string, unknown> = { status };
+  if (startedAt) updateData.startedAt = startedAt;
+
+  await db.update(callRecords)
+    .set(updateData)
+    .where(eq(callRecords.id, callId));
+}
+
+export async function endCall(callId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const [record] = await db.select().from(callRecords).where(eq(callRecords.id, callId)).limit(1);
+  if (!record) return;
+
+  const endedAt = new Date();
+  let durationSeconds = 0;
+  if (record.startedAt) {
+    durationSeconds = Math.round((endedAt.getTime() - new Date(record.startedAt).getTime()) / 1000);
+  }
+
+  await db.update(callRecords)
+    .set({ status: "ended", endedAt, durationSeconds })
+    .where(eq(callRecords.id, callId));
+}
+
+export async function getCallHistory(conversationId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select()
+    .from(callRecords)
+    .where(eq(callRecords.conversationId, conversationId))
+    .orderBy(desc(callRecords.createdAt))
+    .limit(limit);
+}
+
+export async function getCallById(callId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(callRecords).where(eq(callRecords.id, callId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 // ============ NOTIFICATION FUNCTIONS ============
 
 export async function createNotification(data: InsertNotification) {
@@ -572,13 +707,32 @@ export async function createNotification(data: InsertNotification) {
 export async function getUserNotifications(userId: number, limit = 20, offset = 0) {
   const db = await getDb();
   if (!db) return [];
-  
-  return db.select()
+
+  // Get notifications with actor info and post preview
+  const rows = await db.select({
+    id: notifications.id,
+    type: notifications.type,
+    actorId: notifications.actorId,
+    postId: notifications.postId,
+    read: notifications.read,
+    createdAt: notifications.createdAt,
+    // Actor (who triggered the notification)
+    actorName: users.name,
+    actorHandle: users.handle,
+    actorAvatar: users.avatarUrl,
+    actorVerified: users.playerVerified,
+    // Post preview (if applicable)
+    postContent: posts.content,
+  })
     .from(notifications)
+    .leftJoin(users, eq(notifications.actorId, users.id))
+    .leftJoin(posts, eq(notifications.postId, posts.id))
     .where(eq(notifications.userId, userId))
     .orderBy(desc(notifications.createdAt))
     .limit(limit)
     .offset(offset);
+
+  return rows;
 }
 
 export async function markNotificationsRead(userId: number) {
@@ -601,175 +755,176 @@ export async function getUnreadNotificationCount(userId: number) {
   return Number(result?.count || 0);
 }
 
-// ============ CONVOY FUNCTIONS ============
+// ============ SQUAD FUNCTIONS ============
 
-export async function getConvoys(limit = 20, offset = 0) {
+export async function getSquads(limit = 20, offset = 0) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select()
-    .from(convoys)
-    .where(eq(convoys.isPrivate, false))
-    .orderBy(desc(convoys.membersCount))
+    .from(squads)
+    .where(eq(squads.isPrivate, false))
+    .orderBy(desc(squads.membersCount))
     .limit(limit)
     .offset(offset);
 }
 
-export async function getConvoyById(id: number) {
+export async function getSquadById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  
-  const result = await db.select().from(convoys).where(eq(convoys.id, id)).limit(1);
+
+  const result = await db.select().from(squads).where(eq(squads.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function joinConvoy(userId: number, convoyId: number) {
+export async function joinSquad(userId: number, squadId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  const existing = await db.select().from(convoyMembers)
-    .where(and(eq(convoyMembers.userId, userId), eq(convoyMembers.convoyId, convoyId)))
+
+  const existing = await db.select().from(squadMembers)
+    .where(and(eq(squadMembers.userId, userId), eq(squadMembers.squadId, squadId)))
     .limit(1);
-  
+
   if (existing.length > 0) return false;
-  
-  await db.insert(convoyMembers).values({ userId, convoyId });
-  await db.update(convoys)
-    .set({ membersCount: sql`${convoys.membersCount} + 1` })
-    .where(eq(convoys.id, convoyId));
-  
+
+  await db.insert(squadMembers).values({ userId, squadId });
+  await db.update(squads)
+    .set({ membersCount: sql`${squads.membersCount} + 1` })
+    .where(eq(squads.id, squadId));
+
   return true;
 }
 
-export async function leaveConvoy(userId: number, convoyId: number) {
+export async function leaveSquad(userId: number, squadId: number) {
   const db = await getDb();
   if (!db) return false;
-  
-  const result = await db.delete(convoyMembers)
-    .where(and(eq(convoyMembers.userId, userId), eq(convoyMembers.convoyId, convoyId)));
-  
-  if (result[0].affectedRows > 0) {
-    await db.update(convoys)
-      .set({ membersCount: sql`GREATEST(${convoys.membersCount} - 1, 0)` })
-      .where(eq(convoys.id, convoyId));
+
+  const result = await db.delete(squadMembers)
+    .where(and(eq(squadMembers.userId, userId), eq(squadMembers.squadId, squadId)))
+    .returning({ id: squadMembers.id });
+
+  if (result.length > 0) {
+    await db.update(squads)
+      .set({ membersCount: sql`GREATEST(${squads.membersCount} - 1, 0)` })
+      .where(eq(squads.id, squadId));
     return true;
   }
   return false;
 }
 
-export async function getUserConvoys(userId: number) {
+export async function getUserSquads(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
-  const memberships = await db.select({ convoyId: convoyMembers.convoyId })
-    .from(convoyMembers)
-    .where(eq(convoyMembers.userId, userId));
-  
+
+  const memberships = await db.select({ squadId: squadMembers.squadId })
+    .from(squadMembers)
+    .where(eq(squadMembers.userId, userId));
+
   if (memberships.length === 0) return [];
-  
-  return db.select().from(convoys)
-    .where(inArray(convoys.id, memberships.map(m => m.convoyId)));
+
+  return db.select().from(squads)
+    .where(inArray(squads.id, memberships.map(m => m.squadId)));
 }
 
-export async function isConvoyMember(userId: number, convoyId: number) {
+export async function isSquadMember(userId: number, squadId: number) {
   const db = await getDb();
   if (!db) return false;
-  
-  const result = await db.select().from(convoyMembers)
-    .where(and(eq(convoyMembers.userId, userId), eq(convoyMembers.convoyId, convoyId)))
+
+  const result = await db.select().from(squadMembers)
+    .where(and(eq(squadMembers.userId, userId), eq(squadMembers.squadId, squadId)))
     .limit(1);
-  
+
   return result.length > 0;
 }
 
 
-// ============ CDL VERIFICATION FUNCTIONS ============
+// ============ PLAYER VERIFICATION FUNCTIONS ============
 
-import { cdlVerificationRequests, InsertCdlVerificationRequest, postMedia, InsertPostMedia } from "../drizzle/schema";
+import { playerVerificationRequests, InsertPlayerVerificationRequest, postMedia, InsertPostMedia } from "../drizzle/schema";
 
-export async function createCdlVerificationRequest(data: InsertCdlVerificationRequest) {
+export async function createPlayerVerificationRequest(data: InsertPlayerVerificationRequest) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   // Check if user already has a pending request
-  const existing = await db.select().from(cdlVerificationRequests)
+  const existing = await db.select().from(playerVerificationRequests)
     .where(and(
-      eq(cdlVerificationRequests.userId, data.userId),
-      eq(cdlVerificationRequests.status, "pending")
+      eq(playerVerificationRequests.userId, data.userId),
+      eq(playerVerificationRequests.status, "pending")
     ))
     .limit(1);
-  
+
   if (existing.length > 0) {
     throw new Error("You already have a pending verification request");
   }
-  
-  const [result] = await db.insert(cdlVerificationRequests).values(data);
-  return result.insertId;
+
+  const [newReq] = await db.insert(playerVerificationRequests).values(data).returning({ id: playerVerificationRequests.id });
+  return newReq.id;
 }
 
-export async function getCdlVerificationRequest(userId: number) {
+export async function getPlayerVerificationRequest(userId: number) {
   const db = await getDb();
   if (!db) return undefined;
-  
-  const result = await db.select().from(cdlVerificationRequests)
-    .where(eq(cdlVerificationRequests.userId, userId))
-    .orderBy(desc(cdlVerificationRequests.createdAt))
+
+  const result = await db.select().from(playerVerificationRequests)
+    .where(eq(playerVerificationRequests.userId, userId))
+    .orderBy(desc(playerVerificationRequests.createdAt))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getPendingCdlVerifications(limit = 20, offset = 0) {
+export async function getPendingPlayerVerifications(limit = 20, offset = 0) {
   const db = await getDb();
   if (!db) return [];
-  
+
   return db.select()
-    .from(cdlVerificationRequests)
-    .where(eq(cdlVerificationRequests.status, "pending"))
-    .orderBy(cdlVerificationRequests.createdAt)
+    .from(playerVerificationRequests)
+    .where(eq(playerVerificationRequests.status, "pending"))
+    .orderBy(playerVerificationRequests.createdAt)
     .limit(limit)
     .offset(offset);
 }
 
-export async function approveCdlVerification(requestId: number, reviewerId: number) {
+export async function approvePlayerVerification(requestId: number, reviewerId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  const request = await db.select().from(cdlVerificationRequests)
-    .where(eq(cdlVerificationRequests.id, requestId))
+
+  const request = await db.select().from(playerVerificationRequests)
+    .where(eq(playerVerificationRequests.id, requestId))
     .limit(1);
-  
+
   if (request.length === 0) throw new Error("Request not found");
-  
-  await db.update(cdlVerificationRequests)
+
+  await db.update(playerVerificationRequests)
     .set({
       status: "approved",
       reviewedById: reviewerId,
       reviewedAt: new Date()
     })
-    .where(eq(cdlVerificationRequests.id, requestId));
-  
-  // Update user's CDL verified status
+    .where(eq(playerVerificationRequests.id, requestId));
+
+  // Update user's player verified status
   await db.update(users)
-    .set({ cdlVerified: true })
+    .set({ playerVerified: true })
     .where(eq(users.id, request[0].userId));
-  
+
   return true;
 }
 
-export async function rejectCdlVerification(requestId: number, reviewerId: number, reason: string) {
+export async function rejectPlayerVerification(requestId: number, reviewerId: number, reason: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  await db.update(cdlVerificationRequests)
+
+  await db.update(playerVerificationRequests)
     .set({
       status: "rejected",
       reviewedById: reviewerId,
       reviewedAt: new Date(),
       rejectionReason: reason
     })
-    .where(eq(cdlVerificationRequests.id, requestId));
-  
+    .where(eq(playerVerificationRequests.id, requestId));
+
   return true;
 }
 
@@ -779,8 +934,8 @@ export async function addPostMedia(data: InsertPostMedia) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const [result] = await db.insert(postMedia).values(data);
-  return result.insertId;
+  const [newMedia] = await db.insert(postMedia).values(data).returning({ id: postMedia.id });
+  return newMedia.id;
 }
 
 export async function getPostMedia(postId: number) {
@@ -831,7 +986,7 @@ export async function updateVerificationStatus(userId: number, status: "pending"
     updateData.suspendedAt = new Date();
     updateData.suspensionReason = "Failed to verify identity within 24 hours";
   } else if (status === "verified") {
-    updateData.cdlVerified = true;
+    updateData.playerVerified = true;
   }
   
   await db.update(users)
@@ -848,7 +1003,7 @@ export async function getUserVerificationStatus(userId: number) {
     verificationDeadline: users.verificationDeadline,
     suspendedAt: users.suspendedAt,
     suspensionReason: users.suspensionReason,
-    cdlVerified: users.cdlVerified,
+    playerVerified: users.playerVerified,
   }).from(users).where(eq(users.id, userId)).limit(1);
   
   return result.length > 0 ? result[0] : undefined;
@@ -885,9 +1040,10 @@ export async function suspendExpiredUsers() {
       eq(users.verificationStatus, "pending"),
       sql`${users.verificationDeadline} < ${now}`,
       sql`${users.verificationDeadline} IS NOT NULL`
-    ));
-  
-  return result[0].affectedRows;
+    ))
+    .returning({ id: users.id });
+
+  return result.length;
 }
 
 export async function getAllPendingVerifications(limit = 50, offset = 0) {
@@ -896,13 +1052,13 @@ export async function getAllPendingVerifications(limit = 50, offset = 0) {
   
   // Get all users with submitted verification requests
   const requests = await db.select({
-    request: cdlVerificationRequests,
+    request: playerVerificationRequests,
     user: users
   })
-    .from(cdlVerificationRequests)
-    .innerJoin(users, eq(cdlVerificationRequests.userId, users.id))
-    .where(eq(cdlVerificationRequests.status, "pending"))
-    .orderBy(cdlVerificationRequests.createdAt)
+    .from(playerVerificationRequests)
+    .innerJoin(users, eq(playerVerificationRequests.userId, users.id))
+    .where(eq(playerVerificationRequests.status, "pending"))
+    .orderBy(playerVerificationRequests.createdAt)
     .limit(limit)
     .offset(offset);
   
@@ -982,10 +1138,223 @@ export async function deletePushSubscription(endpoint: string) {
 export async function getAllPushSubscriptionsForUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
+
   const { pushSubscriptions } = await import("../drizzle/schema");
-  
+
   return db.select()
     .from(pushSubscriptions)
     .where(eq(pushSubscriptions.userId, userId));
+}
+
+
+// ============ CLUB FUNCTIONS ============
+
+import { clubs, InsertClub, clubMembers, InsertClubMember } from "../drizzle/schema";
+
+export async function getClubs(limit = 20, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select()
+    .from(clubs)
+    .orderBy(desc(clubs.membersCount))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getClubBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(clubs).where(eq(clubs.slug, slug)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getClubById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(clubs).where(eq(clubs.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function joinClub(userId: number, clubId: number, role: "player" | "staff" | "fan" | "admin" = "fan") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await db.select().from(clubMembers)
+    .where(and(eq(clubMembers.userId, userId), eq(clubMembers.clubId, clubId)))
+    .limit(1);
+
+  if (existing.length > 0) return false;
+
+  await db.insert(clubMembers).values({ userId, clubId, role });
+  await db.update(clubs)
+    .set({ membersCount: sql`${clubs.membersCount} + 1` })
+    .where(eq(clubs.id, clubId));
+
+  return true;
+}
+
+export async function leaveClub(userId: number, clubId: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  const result = await db.delete(clubMembers)
+    .where(and(eq(clubMembers.userId, userId), eq(clubMembers.clubId, clubId)))
+    .returning({ id: clubMembers.id });
+
+  if (result.length > 0) {
+    await db.update(clubs)
+      .set({ membersCount: sql`GREATEST(${clubs.membersCount} - 1, 0)` })
+      .where(eq(clubs.id, clubId));
+    return true;
+  }
+  return false;
+}
+
+export async function getClubMembers(clubId: number, limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    member: clubMembers,
+    user: users,
+  })
+    .from(clubMembers)
+    .innerJoin(users, eq(clubMembers.userId, users.id))
+    .where(eq(clubMembers.clubId, clubId))
+    .limit(limit)
+    .offset(offset);
+}
+
+
+// ============ MATCH FUNCTIONS ============
+
+import { matches, InsertMatch } from "../drizzle/schema";
+
+export async function getMatches(status?: "scheduled" | "live" | "finished" | "cancelled", limit = 20, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const query = db.select().from(matches);
+  if (status) {
+    return query
+      .where(eq(matches.status, status))
+      .orderBy(desc(matches.matchDate))
+      .limit(limit)
+      .offset(offset);
+  }
+  return query.orderBy(desc(matches.matchDate)).limit(limit).offset(offset);
+}
+
+export async function getMatchById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(matches).where(eq(matches.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createMatch(data: InsertMatch) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [newMatch] = await db.insert(matches).values(data).returning({ id: matches.id });
+  return newMatch.id;
+}
+
+
+// ============ SCOUTING FUNCTIONS ============
+
+import { playerProfiles, InsertPlayerProfile } from "../drizzle/schema";
+
+export async function getScoutingProfiles(filters: {
+  position?: string;
+  nationality?: string;
+  availableForTransfer?: boolean;
+  availableForTrial?: boolean;
+}, limit = 20, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [];
+  if (filters.availableForTransfer !== undefined) {
+    conditions.push(eq(playerProfiles.availableForTransfer, filters.availableForTransfer));
+  }
+  if (filters.availableForTrial !== undefined) {
+    conditions.push(eq(playerProfiles.availableForTrial, filters.availableForTrial));
+  }
+
+  const profiles = await db.select({
+    profile: playerProfiles,
+    user: users,
+  })
+    .from(playerProfiles)
+    .innerJoin(users, eq(playerProfiles.userId, users.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .limit(limit)
+    .offset(offset);
+
+  // Apply position/nationality filters in JS (since they're on the users table)
+  return profiles.filter(p => {
+    if (filters.position && p.user.position !== filters.position) return false;
+    if (filters.nationality && p.user.nationality !== filters.nationality) return false;
+    return true;
+  });
+}
+
+export async function getPlayerProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(playerProfiles)
+    .where(eq(playerProfiles.userId, userId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertPlayerProfile(userId: number, data: Partial<InsertPlayerProfile>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await getPlayerProfile(userId);
+  if (existing) {
+    await db.update(playerProfiles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(playerProfiles.userId, userId));
+  } else {
+    await db.insert(playerProfiles).values({ ...data, userId });
+  }
+}
+
+
+// ============ GROUNDS FUNCTIONS ============
+
+import { grounds } from "../drizzle/schema";
+
+export async function getGrounds(type?: "stadium" | "training_ground" | "neutral_venue" | "academy", limit = 20, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (type) {
+    return db.select().from(grounds)
+      .where(eq(grounds.type, type))
+      .orderBy(desc(grounds.rating))
+      .limit(limit)
+      .offset(offset);
+  }
+  return db.select().from(grounds)
+    .orderBy(desc(grounds.rating))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getGroundById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(grounds).where(eq(grounds.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }

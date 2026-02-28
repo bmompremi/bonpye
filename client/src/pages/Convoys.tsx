@@ -1,6 +1,5 @@
-/* TCsocial Convoys Page
- * Design: "Midnight Highway" - Cinematic Dark Mode
- * Trucker groups/communities
+/* BONPYE Football Communities
+ * Football squads, fan groups, and player communities
  */
 
 import { Button } from "@/components/ui/button";
@@ -12,53 +11,54 @@ import {
   Moon,
   Search,
   Sun,
-  Truck,
+  Trophy,
   Users,
   MapPin,
   Shield,
-  Wrench,
-  DollarSign,
+  Target,
   Heart,
+  Star,
+  Swords,
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
-interface Convoy {
+interface Squad {
   id: number;
   name: string;
   description: string;
   members: number;
   posts: number;
-  icon: typeof Truck;
+  icon: typeof Trophy;
   color: string;
   featured?: boolean;
 }
 
-const convoys: Convoy[] = [
+const squads: Squad[] = [
   {
     id: 1,
-    name: "Owner Operators United",
-    description: "For independent truckers running their own authority. Share tips, rates, and business advice.",
+    name: "Strikers United",
+    description: "For forwards who live for the goal. Share finishing tips, positioning drills, and celebrate great strikes.",
     members: 45200,
     posts: 12400,
-    icon: DollarSign,
-    color: "text-green-500",
+    icon: Target,
+    color: "text-red-500",
     featured: true,
   },
   {
     id: 2,
-    name: "Flatbed Nation",
-    description: "Flatbedders unite! Tarping tips, securement advice, and load sharing.",
+    name: "Goalkeeper Guild",
+    description: "Shot-stoppers unite! Diving techniques, distribution tips, and keeper training routines.",
     members: 28900,
     posts: 8700,
-    icon: Truck,
+    icon: Shield,
     color: "text-primary",
     featured: true,
   },
   {
     id: 3,
-    name: "Women in Trucking",
-    description: "Supporting and connecting women drivers across the industry.",
+    name: "Women in Football",
+    description: "Supporting and connecting women players, coaches, and fans across the beautiful game.",
     members: 18500,
     posts: 5600,
     icon: Heart,
@@ -67,35 +67,35 @@ const convoys: Convoy[] = [
   },
   {
     id: 4,
-    name: "Reefer Runners",
-    description: "Temperature-controlled hauling community. Keep it cool!",
+    name: "Midfield Maestros",
+    description: "The engine room of every team. Passing, vision, and controlling the tempo of the game.",
     members: 22100,
     posts: 6200,
-    icon: Truck,
+    icon: Star,
     color: "text-blue-400",
   },
   {
     id: 5,
-    name: "New Drivers Hub",
-    description: "Just got your CDL? This is your place to learn from experienced drivers.",
+    name: "Youth Academy",
+    description: "Just starting your football journey? Learn from experienced players and coaches.",
     members: 34600,
     posts: 15800,
-    icon: Shield,
+    icon: Users,
     color: "text-yellow-500",
   },
   {
     id: 6,
-    name: "Truck Mechanics Corner",
-    description: "DIY repairs, maintenance tips, and mechanic recommendations.",
+    name: "Coaching Corner",
+    description: "Tactics, training plans, match analysis, and coaching certifications.",
     members: 19800,
     posts: 7400,
-    icon: Wrench,
+    icon: Trophy,
     color: "text-orange-500",
   },
   {
     id: 7,
-    name: "Regional Haulers",
-    description: "Home every weekend? Connect with other regional drivers.",
+    name: "Sunday League Heroes",
+    description: "Grassroots football at its finest. Share your weekend warrior stories.",
     members: 15200,
     posts: 4100,
     icon: MapPin,
@@ -103,11 +103,11 @@ const convoys: Convoy[] = [
   },
   {
     id: 8,
-    name: "Team Drivers",
-    description: "Running team? Share your experiences and find partners.",
+    name: "Defenders Alliance",
+    description: "Clean sheets and last-ditch tackles. For centre-backs and full-backs who love defending.",
     members: 8900,
     posts: 2300,
-    icon: Users,
+    icon: Shield,
     color: "text-cyan-500",
   },
 ];
@@ -117,7 +117,7 @@ export default function Convoys() {
 
   const handleComingSoon = () => {
     toast("Feature coming soon!", {
-      description: "We're building this for the trucker community.",
+      description: "We're building this for the football community.",
     });
   };
 
@@ -137,7 +137,7 @@ export default function Convoys() {
             <Link href="/" className="p-2 hover:bg-secondary rounded-lg transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </Link>
-            <h1 className="font-display text-xl font-bold tracking-wider">CONVOYS</h1>
+            <h1 className="font-display text-xl font-bold tracking-wider">SQUADS</h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -158,24 +158,24 @@ export default function Convoys() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search convoys..."
+              placeholder="Search squads..."
               className="w-full bg-secondary/50 border border-border rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50"
               onClick={handleComingSoon}
             />
           </div>
         </div>
 
-        {/* Featured Convoys */}
+        {/* Featured Squads */}
         <section className="mb-12">
           <h2 className="font-display text-2xl font-bold mb-6">
-            FEATURED <span className="text-primary">CONVOYS</span>
+            FEATURED <span className="text-primary">SQUADS</span>
           </h2>
           <div className="grid md:grid-cols-3 gap-4">
-            {convoys
+            {squads
               .filter((c) => c.featured)
-              .map((convoy, index) => (
+              .map((squad, index) => (
                 <motion.div
-                  key={convoy.id}
+                  key={squad.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -185,18 +185,18 @@ export default function Convoys() {
                     onClick={handleComingSoon}
                   >
                     <div className="flex items-start gap-4">
-                      <div className={`w-14 h-14 rounded-xl bg-secondary flex items-center justify-center ${convoy.color}`}>
-                        <convoy.icon className="h-7 w-7" />
+                      <div className={`w-14 h-14 rounded-xl bg-secondary flex items-center justify-center ${squad.color}`}>
+                        <squad.icon className="h-7 w-7" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-display text-lg font-semibold">{convoy.name}</h3>
+                        <h3 className="font-display text-lg font-semibold">{squad.name}</h3>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {convoy.description}
+                          {squad.description}
                         </p>
                         <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                          <span>{formatNumber(convoy.members)} members</span>
+                          <span>{formatNumber(squad.members)} members</span>
                           <span>·</span>
-                          <span>{formatNumber(convoy.posts)} posts</span>
+                          <span>{formatNumber(squad.posts)} posts</span>
                         </div>
                       </div>
                     </div>
@@ -207,7 +207,7 @@ export default function Convoys() {
                         handleComingSoon();
                       }}
                     >
-                      Join Convoy
+                      Join Squad
                     </Button>
                   </Card>
                 </motion.div>
@@ -215,15 +215,15 @@ export default function Convoys() {
           </div>
         </section>
 
-        {/* All Convoys */}
+        {/* All Squads */}
         <section>
           <h2 className="font-display text-2xl font-bold mb-6">
-            ALL <span className="text-primary">CONVOYS</span>
+            ALL <span className="text-primary">SQUADS</span>
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {convoys.map((convoy, index) => (
+            {squads.map((squad, index) => (
               <motion.div
-                key={convoy.id}
+                key={squad.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -233,15 +233,15 @@ export default function Convoys() {
                   onClick={handleComingSoon}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-lg bg-secondary flex items-center justify-center ${convoy.color}`}>
-                      <convoy.icon className="h-6 w-6" />
+                    <div className={`w-12 h-12 rounded-lg bg-secondary flex items-center justify-center ${squad.color}`}>
+                      <squad.icon className="h-6 w-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{convoy.name}</h3>
+                      <h3 className="font-semibold truncate">{squad.name}</h3>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span>{formatNumber(convoy.members)} members</span>
+                        <span>{formatNumber(squad.members)} members</span>
                         <span>·</span>
-                        <span>{formatNumber(convoy.posts)} posts</span>
+                        <span>{formatNumber(squad.posts)} posts</span>
                       </div>
                     </div>
                     <Button
@@ -261,20 +261,20 @@ export default function Convoys() {
           </div>
         </section>
 
-        {/* Create Convoy CTA */}
+        {/* Create Squad CTA */}
         <section className="mt-12">
           <Card className="p-8 bg-primary/10 border-primary/30 text-center">
             <h3 className="font-display text-2xl font-bold mb-2">
-              START YOUR OWN CONVOY
+              START YOUR OWN SQUAD
             </h3>
             <p className="text-muted-foreground mb-4">
-              Don't see a group for your niche? Create your own convoy and build your community.
+              Don't see a group for your niche? Create your own squad and build your football community.
             </p>
             <Button
               onClick={handleComingSoon}
               className="bg-primary hover:bg-primary/90"
             >
-              Create Convoy
+              Create Squad
             </Button>
           </Card>
         </section>

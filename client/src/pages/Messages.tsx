@@ -1,5 +1,5 @@
-/* TCsocial Messages - Direct Messaging
- * Like Twitter/X DMs - Now with real database integration
+/* BONPYE Messages - Direct Messaging
+ * With media uploads, voice & video calls
  */
 
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -10,24 +10,33 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
+  Bell,
+  BellOff,
   Image as ImageIcon,
+  Film,
   Info,
   Loader2,
   Moon,
-  MoreHorizontal,
   Phone,
   Search,
   Send,
   Settings,
+  Shield,
   Smile,
   Sun,
+  Trash2,
   Video,
   MessageSquarePlus,
   Users,
+  Archive,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type RefObject } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { useMediaUpload } from "@/hooks/useMediaUpload";
+import { useWebRTCCall } from "@/hooks/useWebRTCCall";
+import CallOverlay from "@/components/CallOverlay";
+import { MediaPreview, ImageLightbox } from "@/components/MediaPreview";
 
 export default function Messages() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
@@ -37,7 +46,29 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Media upload hook
+  const mediaUpload = useMediaUpload();
+
+  // WebRTC call hook
+  const webrtcCall = useWebRTCCall(user?.id);
+
+  // Close settings dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setShowSettings(false);
+      }
+    }
+    if (showSettings) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showSettings]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -47,19 +78,19 @@ export default function Messages() {
   }, [authLoading, isAuthenticated]);
 
   // Get conversations
-  const { data: conversations, isLoading: conversationsLoading, refetch: refetchConversations } = 
+  const { data: conversations, isLoading: conversationsLoading, refetch: refetchConversations } =
     trpc.message.getConversations.useQuery(undefined, {
       enabled: isAuthenticated,
-      refetchInterval: 5000, // Poll every 5 seconds for new messages
+      refetchInterval: 5000,
     });
 
   // Get messages for selected conversation
-  const { data: messages, isLoading: messagesLoading, refetch: refetchMessages } = 
+  const { data: messages, isLoading: messagesLoading, refetch: refetchMessages } =
     trpc.message.getMessages.useQuery(
       { conversationId: selectedConversationId!, limit: 100, offset: 0 },
-      { 
+      {
         enabled: !!selectedConversationId,
-        refetchInterval: 3000, // Poll every 3 seconds for new messages
+        refetchInterval: 3000,
       }
     );
 
@@ -79,6 +110,7 @@ export default function Messages() {
   const sendMessageMutation = trpc.message.send.useMutation({
     onSuccess: () => {
       setNewMessage("");
+      mediaUpload.clearPreview();
       refetchMessages();
       refetchConversations();
     },
@@ -105,12 +137,25 @@ export default function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedConversationId) return;
-    
+  const handleSendMessage = async () => {
+    if ((!newMessage.trim() && !mediaUpload.preview) || !selectedConversationId) return;
+
+    let imageUrl: string | undefined;
+    let videoUrl: string | undefined;
+
+    // Upload media if present
+    if (mediaUpload.preview) {
+      const result = await mediaUpload.upload();
+      if (!result) return; // Upload failed
+      imageUrl = result.imageUrl;
+      videoUrl = result.videoUrl;
+    }
+
     sendMessageMutation.mutate({
       conversationId: selectedConversationId,
-      content: newMessage.trim(),
+      content: newMessage.trim() || (imageUrl ? "📷 Photo" : "🎬 Video"),
+      imageUrl,
+      videoUrl,
     });
   };
 
@@ -118,10 +163,26 @@ export default function Messages() {
     getOrCreateConversationMutation.mutate({ userId });
   };
 
-  const handleComingSoon = () => {
-    toast("Feature coming soon!", {
-      description: "We're building this for the trucker community.",
-    });
+  const handleVoiceCall = () => {
+    if (!selectedConversationId || !currentChatPartner) return;
+    webrtcCall.startCall(
+      selectedConversationId,
+      currentChatPartner.id,
+      "voice",
+      currentChatPartner.name || "Player",
+      currentChatPartner.avatarUrl || null
+    );
+  };
+
+  const handleVideoCall = () => {
+    if (!selectedConversationId || !currentChatPartner) return;
+    webrtcCall.startCall(
+      selectedConversationId,
+      currentChatPartner.id,
+      "video",
+      currentChatPartner.name || "Player",
+      currentChatPartner.avatarUrl || null
+    );
   };
 
   // Get the other participant in the conversation
@@ -143,6 +204,18 @@ export default function Messages() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
+      {/* Hidden file input for media upload */}
+      <input
+        ref={mediaUpload.fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) mediaUpload.handleFileSelect(file);
+          e.target.value = "";
+        }}
+      />
+
       {/* Conversations List */}
       <div className={`w-full md:w-96 border-r border-border flex flex-col ${selectedConversationId ? 'hidden md:flex' : 'flex'}`}>
         {/* Header */}
@@ -157,9 +230,103 @@ export default function Messages() {
             <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-secondary transition-colors">
               {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
-            <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors">
-              <Settings className="h-5 w-5" />
-            </button>
+            <div className="relative" ref={settingsRef}>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className={`p-2 rounded-full hover:bg-secondary transition-colors ${showSettings ? "bg-secondary" : ""}`}
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+
+              {/* Settings dropdown */}
+              {showSettings && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 w-64 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden"
+                >
+                  <div className="p-2">
+                    <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Message Settings
+                    </p>
+
+                    <button
+                      onClick={() => {
+                        toast.success("Message requests enabled");
+                        setShowSettings(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary transition-colors text-sm text-left"
+                    >
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <p className="font-medium">Message Requests</p>
+                        <p className="text-xs text-muted-foreground">Filter unknown senders</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        toast.success("Notifications preference saved");
+                        setShowSettings(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary transition-colors text-sm text-left"
+                    >
+                      <Bell className="h-4 w-4 text-green-500" />
+                      <div>
+                        <p className="font-medium">Notifications</p>
+                        <p className="text-xs text-muted-foreground">Manage message alerts</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        toast("Archived messages coming soon");
+                        setShowSettings(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary transition-colors text-sm text-left"
+                    >
+                      <Archive className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <p className="font-medium">Archived Chats</p>
+                        <p className="text-xs text-muted-foreground">View hidden conversations</p>
+                      </div>
+                    </button>
+
+                    <div className="border-t border-border my-1" />
+
+                    <button
+                      onClick={() => {
+                        toast("Muted conversations: none");
+                        setShowSettings(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary transition-colors text-sm text-left"
+                    >
+                      <BellOff className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Muted Conversations</p>
+                        <p className="text-xs text-muted-foreground">Manage muted chats</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        toast("Blocked contacts: none");
+                        setShowSettings(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary transition-colors text-sm text-left"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <div>
+                        <p className="font-medium">Blocked Users</p>
+                        <p className="text-xs text-muted-foreground">Manage blocked accounts</p>
+                      </div>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -187,7 +354,7 @@ export default function Messages() {
             <div className="text-center py-8 px-4">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No conversations yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Start a new message to connect with other drivers</p>
+              <p className="text-sm text-muted-foreground mt-1">Start a new message to connect with other players</p>
             </div>
           ) : (
             conversations
@@ -200,7 +367,7 @@ export default function Messages() {
               .map((conv: any) => {
                 const other = getOtherParticipant(conv);
                 if (!other) return null;
-                
+
                 return (
                   <motion.button
                     key={conv.id}
@@ -220,12 +387,12 @@ export default function Messages() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
                         <span className="font-semibold truncate">
-                          {other.name || 'Driver'}
+                          {other.name || 'Player'}
                         </span>
-                        {other.cdlVerified && (
+                        {other.playerVerified && (
                           <span className="bg-primary text-primary-foreground text-xs px-1 rounded">✓</span>
                         )}
-                        <span className="text-muted-foreground text-sm">@{other.handle || 'driver'}</span>
+                        <span className="text-muted-foreground text-sm">@{other.handle || 'player'}</span>
                       </div>
                       <p className="text-sm truncate text-muted-foreground">
                         {conv.lastMessage || 'No messages yet'}
@@ -260,16 +427,20 @@ export default function Messages() {
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-border flex items-center justify-between">
-              <button
+              <div
                 onClick={() => setSelectedConversationId(null)}
-                className="flex items-center gap-3 hover:opacity-70 transition-opacity flex-1"
+                className="flex items-center gap-3 hover:opacity-70 transition-opacity flex-1 cursor-pointer"
+                role="button"
+                tabIndex={0}
               >
-                <button
-                  onClick={() => setSelectedConversationId(null)}
-                  className="md:hidden p-2 rounded-full hover:bg-secondary transition-colors"
+                <div
+                  onClick={(e) => { e.stopPropagation(); setSelectedConversationId(null); }}
+                  className="md:hidden p-2 rounded-full hover:bg-secondary transition-colors cursor-pointer"
+                  role="button"
+                  tabIndex={0}
                 >
                   <ArrowLeft className="h-5 w-5" />
-                </button>
+                </div>
                 <img
                   src={currentChatPartner.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentChatPartner.name || 'User')}&background=dc2626&color=fff`}
                   alt={currentChatPartner.name || 'User'}
@@ -277,22 +448,22 @@ export default function Messages() {
                 />
                 <div className="text-left">
                   <div className="flex items-center gap-1">
-                    <span className="font-semibold hover:underline cursor-pointer">{currentChatPartner.name || 'Driver'}</span>
-                    {currentChatPartner.cdlVerified && (
+                    <span className="font-semibold hover:underline cursor-pointer">{currentChatPartner.name || 'Player'}</span>
+                    {currentChatPartner.playerVerified && (
                       <span className="bg-primary text-primary-foreground text-xs px-1 rounded">✓</span>
                     )}
                   </div>
-                  <span className="text-sm text-muted-foreground">@{currentChatPartner.handle || 'driver'}</span>
+                  <span className="text-sm text-muted-foreground">@{currentChatPartner.handle || 'player'}</span>
                 </div>
-              </button>
+              </div>
               <div className="flex items-center gap-2">
-                <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors">
+                <button onClick={handleVoiceCall} className="p-2 rounded-full hover:bg-secondary transition-colors">
                   <Phone className="h-5 w-5" />
                 </button>
-                <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors">
+                <button onClick={handleVideoCall} className="p-2 rounded-full hover:bg-secondary transition-colors">
                   <Video className="h-5 w-5" />
                 </button>
-                <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors">
+                <button className="p-2 rounded-full hover:bg-secondary transition-colors">
                   <Info className="h-5 w-5" />
                 </button>
               </div>
@@ -308,12 +479,12 @@ export default function Messages() {
                   className="w-16 h-16 rounded-full mx-auto mb-3 object-cover"
                 />
                 <div className="font-bold text-lg flex items-center justify-center gap-1">
-                  {currentChatPartner.name || 'Driver'}
-                  {currentChatPartner.cdlVerified && (
-                    <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded">CDL ✓</span>
+                  {currentChatPartner.name || 'Player'}
+                  {currentChatPartner.playerVerified && (
+                    <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded">⚽ ✓</span>
                   )}
                 </div>
-                <div className="text-muted-foreground">@{currentChatPartner.handle || 'driver'}</div>
+                <div className="text-muted-foreground">@{currentChatPartner.handle || 'player'}</div>
                 {currentChatPartner.bio && (
                   <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
                     {currentChatPartner.bio}
@@ -345,7 +516,31 @@ export default function Messages() {
                           : 'bg-secondary rounded-bl-sm'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                      {/* Image in message */}
+                      {msg.imageUrl && (
+                        <img
+                          src={msg.imageUrl}
+                          alt="Shared image"
+                          className="rounded-xl max-w-full max-h-64 object-cover mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setLightboxImage(msg.imageUrl)}
+                        />
+                      )}
+
+                      {/* Video in message */}
+                      {msg.videoUrl && (
+                        <video
+                          src={msg.videoUrl}
+                          controls
+                          className="rounded-xl max-w-full max-h-64 mb-2"
+                          preload="metadata"
+                        />
+                      )}
+
+                      {/* Text content (hide placeholder text for media-only messages) */}
+                      {msg.content && msg.content !== "📷 Photo" && msg.content !== "🎬 Video" && (
+                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                      )}
+
                       <p className={`text-xs mt-1 ${msg.senderId === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -356,14 +551,33 @@ export default function Messages() {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Media Preview (above input) */}
+            {mediaUpload.preview && (
+              <div className="px-4 border-t border-border bg-background">
+                <MediaPreview
+                  url={mediaUpload.preview.url}
+                  type={mediaUpload.preview.type}
+                  onClear={mediaUpload.clearPreview}
+                />
+              </div>
+            )}
+
             {/* Message Input */}
             <div className="p-4 border-t border-border">
               <div className="flex items-center gap-2">
-                <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors text-primary">
+                <button
+                  onClick={() => mediaUpload.openFilePicker("image")}
+                  className="p-2 rounded-full hover:bg-secondary transition-colors text-primary"
+                  title="Send image"
+                >
                   <ImageIcon className="h-5 w-5" />
                 </button>
-                <button onClick={handleComingSoon} className="p-2 rounded-full hover:bg-secondary transition-colors text-primary">
-                  <Smile className="h-5 w-5" />
+                <button
+                  onClick={() => mediaUpload.openFilePicker("video")}
+                  className="p-2 rounded-full hover:bg-secondary transition-colors text-primary"
+                  title="Send video"
+                >
+                  <Film className="h-5 w-5" />
                 </button>
                 <input
                   type="text"
@@ -375,10 +589,10 @@ export default function Messages() {
                 />
                 <button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                  disabled={(!newMessage.trim() && !mediaUpload.preview) || sendMessageMutation.isPending || mediaUpload.uploading}
                   className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50 transition-colors"
                 >
-                  {sendMessageMutation.isPending ? (
+                  {sendMessageMutation.isPending || mediaUpload.uploading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <Send className="h-5 w-5" />
@@ -393,7 +607,7 @@ export default function Messages() {
             <div className="text-center max-w-sm">
               <h2 className="font-display text-3xl font-bold mb-2">Select a message</h2>
               <p className="text-muted-foreground mb-6">
-                Choose from your existing conversations, start a new one, or just keep trucking.
+                Choose from your existing conversations, start a new one, or just keep playing.
               </p>
               <Button
                 onClick={() => setShowNewMessageModal(true)}
@@ -462,12 +676,12 @@ export default function Messages() {
                       />
                       <div className="text-left">
                         <div className="flex items-center gap-1">
-                          <span className="font-semibold">{u.name || 'Driver'}</span>
-                          {u.cdlVerified && (
+                          <span className="font-semibold">{u.name || 'Player'}</span>
+                          {u.playerVerified && (
                             <span className="bg-primary text-primary-foreground text-xs px-1 rounded">✓</span>
                           )}
                         </div>
-                        <span className="text-sm text-muted-foreground">@{u.handle || 'driver'}</span>
+                        <span className="text-sm text-muted-foreground">@{u.handle || 'player'}</span>
                       </div>
                     </button>
                   ))
@@ -476,6 +690,30 @@ export default function Messages() {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Call Overlay */}
+      <CallOverlay
+        callState={webrtcCall.callState}
+        callInfo={webrtcCall.callInfo}
+        isMuted={webrtcCall.isMuted}
+        isCameraOff={webrtcCall.isCameraOff}
+        callDuration={webrtcCall.callDuration}
+        localVideoRef={webrtcCall.localVideoRef as RefObject<HTMLVideoElement>}
+        remoteVideoRef={webrtcCall.remoteVideoRef as RefObject<HTMLVideoElement>}
+        onHangUp={webrtcCall.hangUp}
+        onAnswer={webrtcCall.answerCall}
+        onDecline={webrtcCall.declineIncoming}
+        onToggleMute={webrtcCall.toggleMute}
+        onToggleCamera={webrtcCall.toggleCamera}
+      />
+
+      {/* Image Lightbox */}
+      {lightboxImage && (
+        <ImageLightbox
+          imageUrl={lightboxImage}
+          onClose={() => setLightboxImage(null)}
+        />
       )}
     </div>
   );

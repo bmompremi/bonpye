@@ -1,5 +1,5 @@
 /**
- * Admin Panel for managing CDL verifications
+ * Admin Panel for managing Player verifications
  * Only accessible to admin users
  */
 
@@ -35,12 +35,12 @@ export default function Admin() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
 
   // Get pending verifications
-  const { data: pendingVerifications, isLoading, refetch } = trpc.cdl.getPending.useQuery(
+  const { data: pendingVerifications, isLoading, refetch } = trpc.verification.getPending.useQuery(
     { limit: 50, offset: 0 },
     { enabled: isAuthenticated && (user as any)?.role === "admin" }
   );
 
-  const approveMutation = trpc.cdl.approve.useMutation({
+  const approveMutation = trpc.verification.approve.useMutation({
     onSuccess: () => {
       toast.success("Verification approved!");
       refetch();
@@ -50,7 +50,7 @@ export default function Admin() {
     },
   });
 
-  const rejectMutation = trpc.cdl.reject.useMutation({
+  const rejectMutation = trpc.verification.reject.useMutation({
     onSuccess: () => {
       toast.success("Verification rejected");
       refetch();
@@ -114,7 +114,7 @@ export default function Admin() {
           </Link>
           <div>
             <h1 className="font-bold text-xl">Admin Panel</h1>
-            <p className="text-sm text-muted-foreground">Manage CDL Verifications</p>
+            <p className="text-sm text-muted-foreground">Manage Player Verifications</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Button
@@ -175,17 +175,19 @@ export default function Admin() {
               {pendingVerifications.map((request: any) => (
                 <div key={request.id} className="p-4">
                   <div className="flex items-start gap-4">
-                    {/* CDL Image */}
-                    <div 
-                      className="w-32 h-20 bg-secondary rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => setSelectedImage(request.cdlImageUrl)}
-                    >
-                      <img
-                        src={request.cdlImageUrl}
-                        alt="CDL"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    {/* ID Document Image */}
+                    {request.idDocumentUrl && (
+                      <div
+                        className="w-32 h-20 bg-secondary rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setSelectedImage(request.idDocumentUrl)}
+                      >
+                        <img
+                          src={request.idDocumentUrl}
+                          alt="ID Document"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
 
                     {/* Details */}
                     <div className="flex-1">
@@ -196,10 +198,21 @@ export default function Admin() {
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                        <p><strong>CDL #:</strong> {request.cdlNumber}</p>
-                        <p><strong>State:</strong> {request.cdlState}</p>
-                        <p><strong>Class:</strong> {request.cdlClass}</p>
-                        <p><strong>Endorsements:</strong> {request.endorsements || "None"}</p>
+                        <p><strong>Full Name:</strong> {request.fullLegalName}</p>
+                        <p><strong>Nationality:</strong> {request.nationality}</p>
+                        <p><strong>Position:</strong> {request.position}</p>
+                        <p><strong>Club:</strong> {request.currentClub || "None"}</p>
+                        {request.proofOfPlayUrl && (
+                          <p className="col-span-2">
+                            <strong>Proof of Play:</strong>{" "}
+                            <button
+                              onClick={() => setSelectedImage(request.proofOfPlayUrl)}
+                              className="text-primary underline"
+                            >
+                              View
+                            </button>
+                          </p>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-2">
                         Submitted: {new Date(request.createdAt).toLocaleString()}
@@ -208,15 +221,17 @@ export default function Admin() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedImage(request.cdlImageUrl)}
-                        className="gap-1"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Button>
+                      {request.idDocumentUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedImage(request.idDocumentUrl)}
+                          className="gap-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View ID
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         onClick={() => handleApprove(request.id)}
@@ -280,14 +295,14 @@ export default function Admin() {
 
       {/* Image Modal */}
       {selectedImage && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
         >
           <div className="max-w-4xl max-h-[90vh] overflow-auto">
             <img
               src={selectedImage}
-              alt="CDL Full View"
+              alt="Document Full View"
               className="w-full h-auto rounded-lg"
             />
           </div>

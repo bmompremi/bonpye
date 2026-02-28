@@ -150,11 +150,11 @@ export default function Verification() {
 
       // Submit verification request
       await submitVerification.mutateAsync({
-        cdlNumber,
-        cdlState,
-        cdlClass,
-        endorsements: endorsements || undefined,
-        cdlImageUrl: uploadResult.url,
+        fullLegalName: cdlNumber,
+        dateOfBirth: cdlState,
+        nationality: endorsements || "Unknown",
+        position: cdlClass || "player",
+        idDocumentUrl: uploadResult.url,
       });
     } catch (error) {
       console.error("Verification submission error:", error);
@@ -223,7 +223,7 @@ export default function Verification() {
               Your account is now suspended and you cannot post, message, or interact with other users.
             </p>
             <p className="text-sm text-muted-foreground">
-              Please contact support at <span className="text-primary">support@tcsocial.com</span> to restore your account.
+              Please contact support at <span className="text-primary">support@bonpye.com</span> to restore your account.
             </p>
           </div>
         )}
@@ -252,7 +252,7 @@ export default function Verification() {
         )}
 
         {/* Already Verified */}
-        {verificationStatus?.cdlVerified && (
+        {verificationStatus?.playerVerified && (
           <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-green-500/20 rounded-full">
@@ -270,7 +270,7 @@ export default function Verification() {
         )}
 
         {/* Pending Verification Review */}
-        {verificationStatus?.cdlRequest?.status === "pending" && (
+        {verificationStatus?.playerRequest?.status === "pending" && (
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-blue-500/20 rounded-full">
@@ -289,7 +289,7 @@ export default function Verification() {
         )}
 
         {/* Rejected Verification */}
-        {verificationStatus?.cdlRequest?.status === "rejected" && (
+        {verificationStatus?.playerRequest?.status === "rejected" && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-red-500/20 rounded-full">
@@ -300,9 +300,9 @@ export default function Verification() {
                 <p className="text-muted-foreground">Your previous request was not approved</p>
               </div>
             </div>
-            {verificationStatus.cdlRequest?.rejectionReason && (
+            {verificationStatus.playerRequest?.rejectionReason && (
               <p className="text-sm text-muted-foreground mb-4">
-                Reason: {verificationStatus.cdlRequest.rejectionReason}
+                Reason: {verificationStatus.playerRequest.rejectionReason}
               </p>
             )}
             <p className="text-sm text-muted-foreground">
@@ -312,7 +312,7 @@ export default function Verification() {
         )}
 
         {/* Verification Form */}
-        {!isSuspended && !verificationStatus?.cdlVerified && verificationStatus?.cdlRequest?.status !== "pending" && (
+        {!isSuspended && !verificationStatus?.playerVerified && verificationStatus?.playerRequest?.status !== "pending" && (
           <>
             {/* Benefits Section */}
             <div className="bg-secondary rounded-2xl p-6 mb-6">
