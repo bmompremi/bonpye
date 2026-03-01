@@ -190,10 +190,32 @@ async function startServer() {
       res.status(500).json({ error: error.message || "Upload failed" });
     }
   });
-  // Serve local uploads as static files
+  // Serve local uploads as static files (iOS-safe headers)
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
     maxAge: "7d",
-    immutable: true,
+    immutable: false,
+    setHeaders(res, filePath) {
+      // Allow cross-origin image loading (required for canvas / iOS WebKit)
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      // Ensure inline display (not download)
+      res.setHeader("Content-Disposition", "inline");
+      // Force correct MIME type for common image extensions so Safari doesn't guess
+      const ext = filePath.split(".").pop()?.toLowerCase();
+      const mimeMap: Record<string, string> = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        gif: "image/gif",
+        webp: "image/webp",
+        mp4: "video/mp4",
+        mov: "video/quicktime",
+        webm: "video/webm",
+      };
+      if (ext && mimeMap[ext]) {
+        res.setHeader("Content-Type", mimeMap[ext]);
+      }
+    },
   }));
 
   // tRPC API

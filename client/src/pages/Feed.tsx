@@ -565,7 +565,9 @@ export default function Feed() {
     
     try {
       const optimizedBlob = await optimizeImageForUpload(file, "post");
-      const optimizedFile = new File([optimizedBlob], file.name, { type: "image/jpeg" });
+      // Always use .jpg extension — avoids iOS CDN/proxy confusion with .HEIC filenames
+      const safeFilename = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+      const optimizedFile = new File([optimizedBlob], safeFilename, { type: "image/jpeg" });
       setSelectedImage(optimizedFile);
       
       const reader = new FileReader();
@@ -1498,6 +1500,12 @@ export default function Feed() {
                         src={post.imageUrl}
                         alt="Post image"
                         className="w-full rounded-2xl object-cover max-h-[500px]"
+                        decoding="async"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          img.onerror = null;
+                          img.style.display = "none";
+                        }}
                       />
                     </div>
                   )}
