@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   MapPin,
   MessageCircle,
+  Menu,
   Moon,
   MoreHorizontal,
   Repeat2,
@@ -1006,11 +1007,6 @@ export default function Feed() {
         )}
 
 
-        {/* BIG App Header Banner */}
-        <div className="bg-[#0F2B52] text-white flex items-center justify-center py-2.5 px-4">
-          <span className="font-display text-2xl font-black tracking-[0.3em] uppercase">BIG</span>
-        </div>
-
         {/* Install App Banner */}
         {isInstallable && !installDismissed && !isInstalled && (
           <div className="bg-gradient-to-r from-primary to-blue-600 text-white px-4 py-3 flex items-center justify-between gap-3">
@@ -1048,7 +1044,41 @@ export default function Feed() {
         )}
 
         {/* Header */}
-        <header className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border z-40">
+        <header className="sticky top-0 bg-background/95 backdrop-blur-md border-b border-border z-40">
+          {/* Facebook-style top bar — mobile only (desktop uses sidebar) */}
+          <div className="md:hidden flex items-center justify-between px-3 py-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLocation("/settings")}
+                className="p-2 hover:bg-secondary rounded-full transition-colors"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <span className="font-display text-3xl font-black tracking-wider text-primary">BIG</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => setLocation("/explore")}
+                className="p-2 hover:bg-secondary rounded-full transition-colors"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setLocation("/notifications")}
+                className="p-2 hover:bg-secondary rounded-full transition-colors"
+              >
+                <Bell className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setLocation("/messages")}
+                className="p-2 hover:bg-secondary rounded-full transition-colors"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Tab bar: For You / Following / News */}
           <div className="flex">
             <button
               onClick={() => setActiveTab("foryou")}
