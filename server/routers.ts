@@ -187,11 +187,6 @@ export const appRouter = router({
         replyToId: z.number().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const status = await db.getUserVerificationStatus(ctx.user.id);
-        if (status?.verificationStatus === 'suspended') {
-          throw new Error('Your account is suspended. Please verify your identity to continue using BONPYE.');
-        }
-
         // Auto-detect URL in content and fetch link preview
         const urlMatch = input.content.match(/https?:\/\/[^\s]+/);
         let linkData: { linkUrl?: string; linkTitle?: string; linkDescription?: string; linkImage?: string; linkSiteName?: string } = {};
@@ -432,11 +427,6 @@ export const appRouter = router({
         videoUrl: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const status = await db.getUserVerificationStatus(ctx.user.id);
-        if (status?.verificationStatus === 'suspended') {
-          throw new Error('Your account is suspended. Please verify your identity to continue using BONPYE.');
-        }
-
         const messageId = await db.sendMessage(
           input.conversationId,
           ctx.user.id,
@@ -586,11 +576,6 @@ export const appRouter = router({
         proofOfPlayUrl: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const status = await db.getUserVerificationStatus(ctx.user.id);
-        if (status?.verificationStatus === 'suspended') {
-          throw new Error('Your account is suspended. Please contact support.');
-        }
-
         const existing = await db.getPlayerVerificationRequest(ctx.user.id);
         if (existing?.status === 'pending') {
           throw new Error('You already have a pending verification request');

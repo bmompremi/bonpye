@@ -40,19 +40,13 @@ export function registerOAuthRoutes(app: Express) {
         lastSignedIn: new Date(),
       });
       
-      // Set 24-hour verification deadline for new users
+      // Notify owner about new user signup
       if (isNewUser) {
-        const newUser = await db.getUserByOpenId(userInfo.openId);
-        if (newUser) {
-          await db.setVerificationDeadline(newUser.id);
-          
-          // Notify owner about new user signup
-          const { notifyOwner } = await import('./notification');
-          await notifyOwner({
-            title: '\ud83d\udc64 New User Signup',
-            content: `New user signed up: ${userInfo.name || 'Unknown'}\nEmail: ${userInfo.email || 'Not provided'}\n\nThey have 24 hours to verify their CDL/ID.`
-          });
-        }
+        const { notifyOwner } = await import('./notification');
+        await notifyOwner({
+          title: '⚽ New User Signup',
+          content: `New user joined BONPYE: ${userInfo.name || 'Unknown'}\nEmail: ${userInfo.email || 'Not provided'}`
+        });
       }
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
