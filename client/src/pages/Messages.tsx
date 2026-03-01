@@ -16,6 +16,7 @@ import {
   Film,
   Info,
   Loader2,
+  Mic,
   Moon,
   Phone,
   Search,
@@ -23,6 +24,7 @@ import {
   Settings,
   Shield,
   Smile,
+  Square,
   Sun,
   Trash2,
   Video,
@@ -30,7 +32,7 @@ import {
   Users,
   Archive,
 } from "lucide-react";
-import { useState, useEffect, useRef, type RefObject } from "react";
+import { useState, useEffect, useRef, useCallback, type RefObject } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
@@ -53,6 +55,73 @@ export default function Messages() {
 
   // Media upload hook
   const mediaUpload = useMediaUpload();
+
+  // Voice note state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const uploadAudio = trpc.upload.image.useMutation();
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/ogg";
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const ext = mimeType.includes("ogg") ? "ogg" : "webm";
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = (e.target?.result as string).split(",")[1];
+          try {
+            const result = await uploadAudio.mutateAsync({
+              base64,
+              filename: `voice-${Date.now()}.${ext}`,
+              contentType: mimeType,
+            });
+            sendMessageMutation.mutate({
+              conversationId: selectedConversationId!,
+              content: "[voice_note]",
+              videoUrl: result.url,
+            });
+          } catch {
+            toast.error("Failed to send voice note");
+          }
+        };
+        reader.readAsDataURL(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
+    } catch {
+      toast.error("Microphone access denied");
+    }
+  }, [selectedConversationId]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setRecordingTime(0);
+  }, [isRecording]);
 
   // WebRTC call hook
   const webrtcCall = useWebRTCCall(user?.id);
@@ -203,7 +272,7 @@ export default function Messages() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="h-screen w-screen max-w-full overflow-hidden bg-background text-foreground flex">
       {/* Hidden file input for media upload */}
       <input
         ref={mediaUpload.fileInputRef}
@@ -422,7 +491,7 @@ export default function Messages() {
       </div>
 
       {/* Chat Area */}
-      <div className={`flex-1 flex flex-col ${selectedConversationId ? 'flex' : 'hidden md:flex'}`}>
+      <div className={`flex-1 min-w-0 flex flex-col overflow-x-hidden ${selectedConversationId ? 'flex' : 'hidden md:flex'}`}>
         {selectedConversationId && currentChatPartner ? (
           <>
             {/* Chat Header */}
@@ -470,7 +539,7 @@ export default function Messages() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-h-0">
               {/* Profile Card */}
               <div className="text-center py-8">
                 <img
@@ -526,8 +595,21 @@ export default function Messages() {
                         />
                       )}
 
+                      {/* Voice note in message */}
+                      {msg.videoUrl && msg.content === "[voice_note]" && (
+                        <div className="flex items-center gap-2 py-1 min-w-[180px]">
+                          <Mic className="h-4 w-4 flex-shrink-0 opacity-70" />
+                          <audio
+                            src={msg.videoUrl}
+                            controls
+                            className="h-8 w-full"
+                            style={{ minWidth: 140 }}
+                          />
+                        </div>
+                      )}
+
                       {/* Video in message */}
-                      {msg.videoUrl && (
+                      {msg.videoUrl && msg.content !== "[voice_note]" && (
                         <video
                           src={msg.videoUrl}
                           controls
@@ -537,7 +619,7 @@ export default function Messages() {
                       )}
 
                       {/* Text content (hide placeholder text for media-only messages) */}
-                      {msg.content && msg.content !== "📷 Photo" && msg.content !== "🎬 Video" && (
+                      {msg.content && msg.content !== "📷 Photo" && msg.content !== "🎬 Video" && msg.content !== "[voice_note]" && (
                         <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                       )}
 
@@ -563,41 +645,78 @@ export default function Messages() {
             )}
 
             {/* Message Input */}
-            <div className="p-4 border-t border-border">
+            <div className="p-4 pb-20 md:pb-4 border-t border-border flex-shrink-0">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => mediaUpload.openFilePicker("image")}
-                  className="p-2 rounded-full hover:bg-secondary transition-colors text-primary"
-                  title="Send image"
-                >
-                  <ImageIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => mediaUpload.openFilePicker("video")}
-                  className="p-2 rounded-full hover:bg-secondary transition-colors text-primary"
-                  title="Send video"
-                >
-                  <Film className="h-5 w-5" />
-                </button>
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  placeholder="Start a new message"
-                  className="flex-1 bg-secondary rounded-full py-3 px-4 outline-none focus:ring-2 focus:ring-primary"
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={(!newMessage.trim() && !mediaUpload.preview) || sendMessageMutation.isPending || mediaUpload.uploading}
-                  className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50 transition-colors"
-                >
-                  {sendMessageMutation.isPending || mediaUpload.uploading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Send className="h-5 w-5" />
-                  )}
-                </button>
+                {!isRecording && (
+                  <>
+                    <button
+                      onClick={() => mediaUpload.openFilePicker("image")}
+                      className="p-2 rounded-full hover:bg-secondary transition-colors text-primary flex-shrink-0"
+                      title="Send image"
+                    >
+                      <ImageIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => mediaUpload.openFilePicker("video")}
+                      className="p-2 rounded-full hover:bg-secondary transition-colors text-primary flex-shrink-0"
+                      title="Send video"
+                    >
+                      <Film className="h-5 w-5" />
+                    </button>
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                      placeholder="Start a new message"
+                      className="flex-1 min-w-0 bg-secondary rounded-full py-3 px-4 outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    {newMessage.trim() || mediaUpload.preview ? (
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={sendMessageMutation.isPending || mediaUpload.uploading}
+                        className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50 transition-colors flex-shrink-0"
+                      >
+                        {sendMessageMutation.isPending || mediaUpload.uploading ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={startRecording}
+                        className="p-2 rounded-full bg-primary text-primary-foreground transition-colors flex-shrink-0"
+                        title="Voice note"
+                      >
+                        <Mic className="h-5 w-5" />
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {isRecording && (
+                  <>
+                    <div className="flex-1 flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-full py-3 px-4">
+                      <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse flex-shrink-0" />
+                      <span className="text-red-500 text-sm font-medium tabular-nums">
+                        {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}
+                      </span>
+                      <span className="text-muted-foreground text-xs">Recording…</span>
+                    </div>
+                    <button
+                      onClick={stopRecording}
+                      className="p-2 rounded-full bg-red-500 text-white transition-colors flex-shrink-0"
+                      title="Stop and send"
+                    >
+                      {uploadAudio.isPending || sendMessageMutation.isPending ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Square className="h-5 w-5 fill-current" />
+                      )}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </>
