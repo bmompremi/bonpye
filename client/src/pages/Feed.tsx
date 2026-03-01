@@ -1327,13 +1327,14 @@ export default function Feed() {
               return (
                 <article
                   key={post.id}
-                  className="p-4 border-b border-border hover:bg-secondary/20 transition-colors cursor-pointer group"
+                  className="border-b border-border hover:bg-secondary/20 transition-colors cursor-pointer group"
                 >
-                  <div className="flex gap-3">
+                  {/* Author row: avatar + name + post text */}
+                  <div className="px-4 pt-4 flex gap-3">
                     <img
                       src={author.avatar}
                       alt={author.name}
-                      className="w-12 h-12 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      className="w-12 h-12 rounded-full object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (author.handle && author.handle !== "player") {
@@ -1376,7 +1377,7 @@ export default function Feed() {
                         <span className="text-muted-foreground">·</span>
                         <span className="text-muted-foreground">{formatTime(post.createdAt)}</span>
                         <div className="ml-auto relative">
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setOpenMenuId(openMenuId === post.id ? null : post.id);
@@ -1467,7 +1468,7 @@ export default function Feed() {
                         </div>
                       </div>
 
-                      {/* Content with clickable links + OG preview card */}
+                      {/* Post text + link preview */}
                       <LinkPreview
                         text={post.content}
                         className="mt-2"
@@ -1480,29 +1481,32 @@ export default function Feed() {
                           linkSiteName: post.linkSiteName,
                         } : null}
                       />
+                    </div>
+                  </div>
 
-                      {/* Image — edge-to-edge within post card */}
-                      {post.imageUrl && (
-                        <div className="-ml-[76px] mt-3 w-[calc(100%+92px)] overflow-hidden rounded-xl">
-                          <img
-                            src={post.imageUrl}
-                            alt="Post image"
-                            className="w-full max-h-[500px] object-cover"
-                          />
-                        </div>
-                      )}
+                  {/* Image — outside flex row, full width with equal 8px bezels */}
+                  {post.imageUrl && (
+                    <div className="px-2 mt-3">
+                      <img
+                        src={post.imageUrl}
+                        alt="Post image"
+                        className="w-full rounded-2xl object-cover max-h-[500px]"
+                      />
+                    </div>
+                  )}
 
-                      {/* Video — edge-to-edge within post card */}
-                      {post.videoUrl && (
-                        <div className="-ml-[76px] mt-3 w-[calc(100%+92px)]">
-                          <VideoPlayer
-                            src={post.videoUrl}
-                            className=""
-                            maxHeight="500px"
-                          />
-                        </div>
-                      )}
+                  {/* Video — outside flex row, full width with equal 8px bezels */}
+                  {post.videoUrl && (
+                    <VideoPlayer
+                      src={post.videoUrl}
+                      className="mt-3 mx-2 rounded-2xl"
+                      maxHeight="500px"
+                    />
+                  )}
 
+                  {/* Actions + replies — indented to align with text column */}
+                  <div className="px-4 pb-4">
+                    <div className="ml-[60px]">
                       {/* Actions */}
                       <div className="flex items-center justify-between mt-3 w-full md:max-w-md">
                         <button
@@ -1547,7 +1551,6 @@ export default function Feed() {
                           </div>
                           <span className="text-xs sm:text-sm hidden sm:inline">{formatNumber(post.viewsCount || 0)}</span>
                         </button>
-                        {/* DM button — only show for other users' posts */}
                         {post.userId !== user?.id && post.userId && (
                           <button
                             onClick={(e) => {
@@ -1584,9 +1587,10 @@ export default function Feed() {
                           <Share className="h-4 w-4 sm:h-5 sm:w-5" />
                         </button>
                       </div>
-                      {/* Inline Reply Box — Telegram style */}
+
+                      {/* Inline Reply Box */}
                       {replyingTo === post.id && (
-                        <div className="-ml-[76px] w-[calc(100%+92px)] mt-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
+                        <div className="mt-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
                             <img
                               src={(user as any)?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop"}
@@ -1625,7 +1629,6 @@ export default function Feed() {
 
                       {/* Comment Thread */}
                       {post.id > 0 && (post.repliesCount || 0) > 0 && (
-                        <div className="-ml-[76px] w-[calc(100%+92px)] pl-[76px]">
                         <CommentThread
                           postId={post.id}
                           repliesCount={post.repliesCount || 0}
@@ -1652,7 +1655,6 @@ export default function Feed() {
                           }}
                           formatTime={formatTime}
                         />
-                        </div>
                       )}
                     </div>
                   </div>

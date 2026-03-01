@@ -105,8 +105,8 @@ function getPlatformName(url: string): string {
 }
 
 export function LinkPreview({ text, className = "", edgeToEdge = false, ogData }: LinkPreviewProps) {
-  // When edgeToEdge, cards break out of the indented content column to span full post width
-  const cardWrap = edgeToEdge ? "-ml-[76px] w-[calc(100%+92px)]" : "";
+  // When edgeToEdge, cards break out of content column with equal 8px bezels (matching uploaded images)
+  const cardWrap = edgeToEdge ? "-ml-[68px] w-[calc(100%+76px)]" : "";
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
