@@ -826,7 +826,82 @@ export const appRouter = router({
       }),
   }),
 
-  // ============ PUSH NOTIFICATION ROUTES ============
+  // ============ SOCCER NEWS ROUTES ============
+  news: router({
+    getLatest: publicProcedure
+      .input(z.object({ category: z.enum(["worldcup", "haiti", "all"]).default("all") }))
+      .query(async ({ input }) => {
+        const feeds: Record<string, string[]> = {
+          worldcup: [
+            "https://news.google.com/rss/search?q=FIFA+World+Cup+2026&hl=en-US&gl=US&ceid=US:en",
+            "https://news.google.com/rss/search?q=World+Cup+2026+soccer&hl=en-US&gl=US&ceid=US:en",
+          ],
+          haiti: [
+            "https://news.google.com/rss/search?q=Haiti+soccer+football&hl=en-US&gl=US&ceid=US:en",
+            "https://news.google.com/rss/search?q=Haiti+national+football+team+Les+Grenadiers&hl=en-US&gl=US&ceid=US:en",
+          ],
+          all: [
+            "https://news.google.com/rss/search?q=FIFA+World+Cup+2026&hl=en-US&gl=US&ceid=US:en",
+            "https://news.google.com/rss/search?q=Haiti+soccer+football+team&hl=en-US&gl=US&ceid=US:en",
+            "https://news.google.com/rss/search?q=Haiti+football+players+Les+Grenadiers&hl=en-US&gl=US&ceid=US:en",
+          ],
+        };
+
+        const parseRSS = (xml: string) => {
+          const items: { title: string; link: string; source: string; pubDate: string; description: string }[] = [];
+          const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/g);
+          for (const match of itemMatches) {
+            const block = match[1];
+            const title = block.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() || "";
+            const rawLink = block.match(/<link>([\s\S]*?)<\/link>/)?.[1]?.trim()
+              || block.match(/<link\s+[^>]*href="([^"]+)"/)?.[1] || "";
+            // Google News wraps real link in the guid or a redirect — extract from url param if present
+            const urlParam = rawLink.match(/[?&]url=([^&]+)/)?.[1];
+            const link = urlParam ? decodeURIComponent(urlParam) : rawLink;
+            const source = block.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() || "Soccer News";
+            const pubDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim() || "";
+            const description = block.match(/<description>([\s\S]*?)<\/description>/)?.[1]
+              ?.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, "").trim().slice(0, 200) || "";
+            if (title && link) items.push({ title, link, source, pubDate, description });
+          }
+          return items;
+        };
+
+        const urls = feeds[input.category];
+        const results = await Promise.allSettled(
+          urls.map(async (url) => {
+            const res = await axios.get(url, {
+              timeout: 8000,
+              headers: { "User-Agent": "Mozilla/5.0 (compatible; BONPYEBot/1.0)" },
+            });
+            return parseRSS(res.data as string);
+          })
+        );
+
+        const allItems = results
+          .filter((r) => r.status === "fulfilled")
+          .flatMap((r) => (r as PromiseFulfilledResult<any>).value);
+
+        // Deduplicate by title, sort newest first
+        const seen = new Set<string>();
+        const unique = allItems.filter((item) => {
+          const key = item.title.slice(0, 60).toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        unique.sort((a, b) => {
+          const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
+          const db2 = b.pubDate ? new Date(b.pubDate).getTime() : 0;
+          return db2 - da;
+        });
+
+        return unique.slice(0, 40);
+      }),
+  }),
+
+// ============ PUSH NOTIFICATION ROUTES ============
   pushNotification: router({
     subscribe: protectedProcedure
       .input(z.object({

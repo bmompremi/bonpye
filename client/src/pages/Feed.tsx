@@ -38,6 +38,9 @@ import {
   Loader2,
   Video,
   BadgeCheck,
+  Newspaper,
+  ExternalLink,
+  Globe,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "wouter";
@@ -393,6 +396,7 @@ export default function Feed() {
   const { isInstallable, isInstalled, install } = usePWAInstall();
   const [installDismissed, setInstallDismissed] = useState(false);
   const [activeTab, setActiveTab] = useState("foryou");
+  const [newsCategory, setNewsCategory] = useState<"all" | "worldcup" | "haiti">("all");
   const [newPostText, setNewPostText] = useState("");
   const [showCompose, setShowCompose] = useState(false);
   const [likedPosts, setLikedPosts] = useState<number[]>([]);
@@ -439,6 +443,12 @@ export default function Feed() {
   // Fetch explore posts (for non-authenticated or "For You" tab)
   const { data: explorePosts, isLoading: exploreLoading, refetch: refetchExplore } = trpc.post.getExplore.useQuery(
     { limit: 20, offset: 0 }
+  );
+
+  // Soccer news query
+  const { data: newsItems, isLoading: newsLoading } = trpc.news.getLatest.useQuery(
+    { category: newsCategory },
+    { enabled: activeTab === "news", staleTime: 15 * 60 * 1000 }
   );
 
   // Upload mutations
@@ -1072,11 +1082,28 @@ export default function Feed() {
                 />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("news")}
+              className={`flex-1 py-4 text-center font-semibold transition-colors relative ${
+                activeTab === "news" ? "" : "text-muted-foreground hover:bg-secondary/50"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1">
+                <Newspaper className="h-4 w-4" />
+                News
+              </span>
+              {activeTab === "news" && (
+                <motion.div
+                  layoutId="tab-indicator"
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-primary rounded-full"
+                />
+              )}
+            </button>
           </div>
         </header>
 
-        {/* Compose Box */}
-        <div className="p-4 border-b border-border">
+        {/* Compose Box — hidden on news tab */}
+        <div className={`p-4 border-b border-border ${activeTab === "news" ? "hidden" : ""}`}>
           <div className="flex gap-3">
             <img
               src={(user as any)?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop"}
@@ -1198,8 +1225,83 @@ export default function Feed() {
           </div>
         </div>
 
+        {/* News Feed */}
+        {activeTab === "news" && (
+          <div>
+            {/* Category filter pills */}
+            <div className="flex gap-2 px-4 py-3 border-b border-border overflow-x-auto">
+              {(["all", "worldcup", "haiti"] as const).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setNewsCategory(cat)}
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    newsCategory === cat
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {cat === "all" ? "⚽ All Soccer" : cat === "worldcup" ? "🏆 World Cup 2026" : "🇭🇹 Haiti"}
+                </button>
+              ))}
+            </div>
+
+            {newsLoading ? (
+              <div className="space-y-4 p-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-secondary rounded w-1/2 mb-1" />
+                    <div className="h-3 bg-secondary rounded w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : !newsItems || newsItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                <Newspaper className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-bold mb-2">No news right now</h3>
+                <p className="text-muted-foreground text-sm">Check back soon for the latest soccer updates.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {newsItems.map((item: any, idx: number) => (
+                  <a
+                    key={idx}
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-3 px-4 py-4 hover:bg-secondary/40 transition-colors group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors line-clamp-3">
+                        {item.title}
+                      </p>
+                      {item.description && (
+                        <p className="text-muted-foreground text-xs mt-1 line-clamp-2">{item.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <Globe className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground truncate">{item.source}</span>
+                        {item.pubDate && (
+                          <>
+                            <span className="text-muted-foreground text-xs">·</span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {new Date(item.pubDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Posts Feed */}
-        {(feedLoading || exploreLoading) ? (
+        {activeTab !== "news" && (
+          (feedLoading || exploreLoading) ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -1538,7 +1640,7 @@ export default function Feed() {
               );
             })}
           </div>
-        )}
+        ))}
       </main>
 
 
