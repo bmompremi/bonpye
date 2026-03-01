@@ -273,8 +273,7 @@ export const appRouter = router({
 
         const repostId = await db.createPost({
           userId: ctx.user.id,
-          content: originalPost.content,
-          imageUrl: originalPost.imageUrl,
+          content: "",
           repostOfId: input.postId,
         });
 

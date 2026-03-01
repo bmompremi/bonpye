@@ -186,7 +186,8 @@ export async function getFeedPosts(userId: number, limit = 20, offset = 0) {
     .from(posts)
     .where(and(
       inArray(posts.userId, userIds),
-      sql`${posts.replyToId} IS NULL`
+      sql`${posts.replyToId} IS NULL`,
+      sql`${posts.repostOfId} IS NULL`
     ))
     .orderBy(desc(posts.createdAt))
     .limit(limit)
@@ -215,11 +216,14 @@ export async function getExplorePosts(limit = 20, offset = 0) {
 
   const postsResult = await db.select()
     .from(posts)
-    .where(sql`${posts.replyToId} IS NULL`)
+    .where(and(
+      sql`${posts.replyToId} IS NULL`,
+      sql`${posts.repostOfId} IS NULL`
+    ))
     .orderBy(desc(posts.createdAt))
     .limit(limit)
     .offset(offset);
-  
+
   // Fetch author info for each post
   const postsWithAuthors = await Promise.all(postsResult.map(async (post) => {
     const author = await getUserById(post.userId);
