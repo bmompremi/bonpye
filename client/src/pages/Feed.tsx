@@ -1006,6 +1006,11 @@ export default function Feed() {
         )}
 
 
+        {/* BIG App Header Banner */}
+        <div className="bg-[#0F2B52] text-white flex items-center justify-center py-2.5 px-4">
+          <span className="font-display text-2xl font-black tracking-[0.3em] uppercase">BIG</span>
+        </div>
+
         {/* Install App Banner */}
         {isInstallable && !installDismissed && !isInstalled && (
           <div className="bg-gradient-to-r from-primary to-blue-600 text-white px-4 py-3 flex items-center justify-between gap-3">
