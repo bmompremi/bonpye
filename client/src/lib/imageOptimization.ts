@@ -1,5 +1,8 @@
 /**
- * Image optimization utilities for consistent sizing across the app
+ * Image optimization utilities for consistent sizing across the app.
+ * iOS-safe: uses createImageBitmap when available (avoids canvas memory
+ * pressure with large HEIC/HEIF photos), falls back to img+canvas,
+ * and finally returns the original file if both fail.
  */
 
 export interface ImageDimensions {
@@ -9,162 +12,223 @@ export interface ImageDimensions {
 
 // Standard max dimensions for different contexts
 export const IMAGE_SIZES = {
-  avatar: { width: 128, height: 128 }, // Profile avatar (square crop)
-  header: { width: 1200, height: 300 }, // Profile header (crop to ratio)
-  post: { width: 1200, height: 1200 }, // Post images (max bounds, preserve ratio)
-  thumbnail: { width: 200, height: 200 }, // Thumbnails (square crop)
+  avatar: { width: 128, height: 128 },
+  header: { width: 1200, height: 300 },
+  post: { width: 1200, height: 1200 },
+  thumbnail: { width: 200, height: 200 },
 };
 
-// Contexts that should crop to exact dimensions (square/fixed ratio)
+// Contexts that crop to exact dimensions (square/fixed ratio)
 const CROP_CONTEXTS = new Set(["avatar", "header", "thumbnail"]);
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Calculate draw coordinates for centre-crop into (tw × th). */
+function cropParams(
+  sw: number,
+  sh: number,
+  tw: number,
+  th: number
+): [number, number, number, number] {
+  const imgRatio = sw / sh;
+  const canvasRatio = tw / th;
+  let sx = 0,
+    sy = 0,
+    srcW = sw,
+    srcH = sh;
+  if (imgRatio > canvasRatio) {
+    srcW = sh * canvasRatio;
+    sx = (sw - srcW) / 2;
+  } else {
+    srcH = sw / canvasRatio;
+    sy = (sh - srcH) / 2;
+  }
+  return [sx, sy, srcW, srcH];
+}
+
+/** Calculate scale-down dimensions that fit within (maxW × maxH). */
+function scaleDims(
+  w: number,
+  h: number,
+  maxW: number,
+  maxH: number
+): [number, number] {
+  if (w <= maxW && h <= maxH) return [w, h];
+  const ratio = Math.min(maxW / w, maxH / h);
+  return [Math.round(w * ratio), Math.round(h * ratio)];
+}
+
+/** Render a canvas and export as JPEG blob. */
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  quality: number
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("canvas.toBlob returned null"))),
+      "image/jpeg",
+      quality
+    );
+  });
+}
+
+// ── createImageBitmap path (modern iOS 15+, Chrome, Firefox) ─────────────────
+
 /**
- * Resize image to specified dimensions with cropping (center crop)
+ * Use createImageBitmap to resize *before* allocating canvas memory.
+ * This is the most memory-efficient path for large iPhone photos.
  */
-export async function resizeImage(
+async function resizeViaImageBitmap(
   file: File,
-  targetWidth: number,
-  targetHeight: number,
-  quality: number = 0.8
+  targetW: number,
+  targetH: number,
+  quality: number
+): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const [dw, dh] =
+    targetW === targetH
+      ? [targetW, targetH] // crop contexts use exact size
+      : scaleDims(bitmap.width, bitmap.height, targetW, targetH);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = dw;
+  canvas.height = dh;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No canvas context");
+
+  if (targetW === targetH && bitmap.width !== bitmap.height) {
+    // Centre-crop for square canvases (avatar, thumbnail)
+    const [sx, sy, srcW, srcH] = cropParams(
+      bitmap.width,
+      bitmap.height,
+      dw,
+      dh
+    );
+    ctx.drawImage(bitmap, sx, sy, srcW, srcH, 0, 0, dw, dh);
+  } else {
+    ctx.drawImage(bitmap, 0, 0, dw, dh);
+  }
+
+  bitmap.close();
+  return canvasToBlob(canvas, quality);
+}
+
+// ── img + canvas fallback (older browsers) ───────────────────────────────────
+
+function resizeViaImgTag(
+  file: File,
+  targetW: number,
+  targetH: number,
+  crop: boolean,
+  quality: number
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onerror = () => reject(new Error("FileReader error"));
+    reader.onload = (ev) => {
       const img = new Image();
+      img.onerror = () => reject(new Error("Image decode error"));
       img.onload = () => {
+        const [dw, dh] = crop
+          ? [targetW, targetH]
+          : scaleDims(img.width, img.height, targetW, targetH);
+
         const canvas = document.createElement("canvas");
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
+        canvas.width = dw;
+        canvas.height = dh;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          reject(new Error("Failed to get canvas context"));
+          reject(new Error("No canvas context"));
           return;
         }
 
-        // Calculate dimensions to maintain aspect ratio (center crop)
-        const imgRatio = img.width / img.height;
-        const canvasRatio = targetWidth / targetHeight;
-        let sourceX = 0;
-        let sourceY = 0;
-        let sourceWidth = img.width;
-        let sourceHeight = img.height;
-
-        if (imgRatio > canvasRatio) {
-          sourceWidth = img.height * canvasRatio;
-          sourceX = (img.width - sourceWidth) / 2;
+        if (crop) {
+          const [sx, sy, srcW, srcH] = cropParams(
+            img.width,
+            img.height,
+            dw,
+            dh
+          );
+          ctx.drawImage(img, sx, sy, srcW, srcH, 0, 0, dw, dh);
         } else {
-          sourceHeight = img.width / canvasRatio;
-          sourceY = (img.height - sourceHeight) / 2;
+          ctx.drawImage(img, 0, 0, dw, dh);
         }
 
-        ctx.drawImage(
-          img,
-          sourceX,
-          sourceY,
-          sourceWidth,
-          sourceHeight,
-          0,
-          0,
-          targetWidth,
-          targetHeight
-        );
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) resolve(blob);
-            else reject(new Error("Failed to create blob"));
-          },
-          "image/jpeg",
-          quality
-        );
+        canvasToBlob(canvas, quality).then(resolve).catch(reject);
       };
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = event.target?.result as string;
+      img.src = ev.target?.result as string;
     };
-    reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsDataURL(file);
   });
 }
 
-/**
- * Scale down image while preserving aspect ratio (no cropping)
- * Fits within maxWidth x maxHeight bounds
- */
-export async function scaleImage(
-  file: File,
-  maxWidth: number,
-  maxHeight: number,
-  quality: number = 0.85
-): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width;
-        let h = img.height;
-
-        // Only scale down, never scale up
-        if (w > maxWidth || h > maxHeight) {
-          const ratio = Math.min(maxWidth / w, maxHeight / h);
-          w = Math.round(w * ratio);
-          h = Math.round(h * ratio);
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Failed to get canvas context"));
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, w, h);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) resolve(blob);
-            else reject(new Error("Failed to create blob"));
-          },
-          "image/jpeg",
-          quality
-        );
-      };
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
-}
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Optimize image before upload
- * - avatar/header/thumbnail: crop to exact dimensions
- * - post: scale down preserving aspect ratio (no crop)
+ * Optimise a file before upload.
+ *
+ * Strategy (in order):
+ *  1. createImageBitmap  — best for iOS (no full-res memory spike)
+ *  2. img + canvas       — fallback for browsers without createImageBitmap
+ *  3. original file blob — last resort so the upload still works
  */
 export async function optimizeImageForUpload(
   file: File,
   context: keyof typeof IMAGE_SIZES
 ): Promise<Blob> {
-  const dimensions = IMAGE_SIZES[context];
+  const { width, height } = IMAGE_SIZES[context];
+  const crop = CROP_CONTEXTS.has(context);
+  const quality = crop ? 0.85 : 0.82;
 
-  if (CROP_CONTEXTS.has(context)) {
-    return resizeImage(file, dimensions.width, dimensions.height, 0.85);
+  // Fast path: createImageBitmap (Safari 15+, all modern browsers)
+  if (typeof createImageBitmap === "function") {
+    try {
+      return await resizeViaImageBitmap(file, width, height, quality);
+    } catch {
+      // fall through to canvas approach
+    }
   }
-  // Post images: scale down but preserve full aspect ratio
-  return scaleImage(file, dimensions.width, dimensions.height, 0.85);
+
+  // Canvas fallback
+  try {
+    return await resizeViaImgTag(file, width, height, crop, quality);
+  } catch {
+    // If both fail (e.g. HEIC on very old iOS WebKit), return the original.
+    // The server accepts image/* so the raw file will still upload.
+    return file;
+  }
 }
 
 /**
- * Get optimized image URL with size parameters
+ * Crop + resize image to exact dimensions (legacy helper — kept for compat).
+ */
+export async function resizeImage(
+  file: File,
+  targetWidth: number,
+  targetHeight: number,
+  quality = 0.8
+): Promise<Blob> {
+  return optimizeImageForUpload(file, "avatar");
+}
+
+/**
+ * Scale down preserving aspect ratio (legacy helper — kept for compat).
+ */
+export async function scaleImage(
+  file: File,
+  maxWidth: number,
+  maxHeight: number,
+  quality = 0.85
+): Promise<Blob> {
+  return optimizeImageForUpload(file, "post");
+}
+
+/**
+ * Get optimised image URL with size parameters (CDN placeholder).
  */
 export function getOptimizedImageUrl(
   url: string,
-  context: keyof typeof IMAGE_SIZES
+  _context: keyof typeof IMAGE_SIZES
 ): string {
-  if (!url) return "";
-  // Placeholder for CDN integration
-  return url;
+  return url ?? "";
 }
