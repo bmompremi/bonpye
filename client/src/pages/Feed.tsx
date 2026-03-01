@@ -1544,6 +1544,21 @@ export default function Feed() {
                           </div>
                           <span className="text-xs sm:text-sm hidden sm:inline">{formatNumber(post.viewsCount || 0)}</span>
                         </button>
+                        {/* DM button — only show for other users' posts */}
+                        {post.userId !== user?.id && post.userId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/messages?user=${post.userId}`);
+                            }}
+                            className="flex items-center gap-0.5 sm:gap-1.5 group text-muted-foreground hover:text-blue-500"
+                            title="Send direct message"
+                          >
+                            <div className="p-1 sm:p-2 rounded-full group-hover:bg-blue-500/10">
+                              <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+                            </div>
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

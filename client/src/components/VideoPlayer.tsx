@@ -1,9 +1,8 @@
 /**
  * VideoPlayer — native HTML5 video with tap-to-play overlay and auto-pause on scroll.
- * No external library dependencies.
  */
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Play } from "lucide-react";
+import { Play, AlertCircle } from "lucide-react";
 
 interface VideoPlayerProps {
   src: string;
@@ -15,19 +14,22 @@ export default function VideoPlayer({ src, className = "", maxHeight = "500px" }
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activated, setActivated] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState(false);
+
+  // Auto-play AFTER React has committed the <video> element to DOM
+  useEffect(() => {
+    if (!activated || !videoRef.current) return;
+    videoRef.current.play().catch(() => {
+      // Autoplay blocked by browser — user can still tap the native controls
+    });
+  }, [activated]);
 
   // Auto-pause when scrolled out of view
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !activated) return;
-
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) {
-          videoRef.current?.pause();
-        }
-      },
+      ([entry]) => { if (!entry.isIntersecting) videoRef.current?.pause(); },
       { threshold: 0.2 }
     );
     observer.observe(el);
@@ -35,12 +37,8 @@ export default function VideoPlayer({ src, className = "", maxHeight = "500px" }
   }, [activated]);
 
   const handleActivate = useCallback(() => {
+    setError(false);
     setActivated(true);
-    setIsPlaying(true);
-    // Small delay so React commits the <video> to DOM first
-    requestAnimationFrame(() => {
-      videoRef.current?.play().catch(() => {});
-    });
   }, []);
 
   return (
@@ -50,7 +48,6 @@ export default function VideoPlayer({ src, className = "", maxHeight = "500px" }
       style={{ maxHeight }}
     >
       {!activated ? (
-        /* Tap-to-play overlay — no network request until tapped */
         <div
           className="flex items-center justify-center cursor-pointer bg-black"
           style={{ minHeight: 200, maxHeight }}
@@ -63,6 +60,16 @@ export default function VideoPlayer({ src, className = "", maxHeight = "500px" }
             <span className="text-xs text-white/60">Tap to play</span>
           </div>
         </div>
+      ) : error ? (
+        <div
+          className="flex items-center justify-center bg-black/80"
+          style={{ minHeight: 200, maxHeight }}
+        >
+          <div className="flex flex-col items-center gap-2 text-white/60">
+            <AlertCircle className="h-8 w-8" />
+            <span className="text-xs">Video unavailable</span>
+          </div>
+        </div>
       ) : (
         <video
           ref={videoRef}
@@ -72,8 +79,7 @@ export default function VideoPlayer({ src, className = "", maxHeight = "500px" }
           preload="auto"
           className="w-full block"
           style={{ maxHeight }}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onError={() => setError(true)}
         />
       )}
     </div>

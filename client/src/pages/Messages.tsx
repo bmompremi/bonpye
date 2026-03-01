@@ -33,7 +33,7 @@ import {
   Archive,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { useCall } from "@/contexts/CallContext";
@@ -43,6 +43,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 export default function Messages() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const searchString = useSearch();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -200,6 +201,20 @@ export default function Messages() {
       toast.error(error.message || "Failed to start conversation");
     },
   });
+
+  // Auto-open DM when navigated from feed with ?user=ID
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    const params = new URLSearchParams(searchString);
+    const targetUserId = params.get("user");
+    if (!targetUserId) return;
+    const id = parseInt(targetUserId, 10);
+    if (!id || id === user.id) return;
+    getOrCreateConversationMutation.mutate({ participantId: id });
+    // Clear the param so reloading doesn't re-trigger
+    window.history.replaceState(null, "", "/messages");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id, searchString]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
