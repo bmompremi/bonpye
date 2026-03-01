@@ -150,6 +150,20 @@ export const appRouter = router({
         return { url };
       }),
 
+    audio: protectedProcedure
+      .input(z.object({
+        base64: z.string(),
+        filename: z.string(),
+        contentType: z.string().default("audio/webm"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const buffer = Buffer.from(input.base64, "base64");
+        const ext = input.filename.split(".").pop() || "webm";
+        const key = `audio/${ctx.user.id}/${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.contentType);
+        return { url };
+      }),
+
     avatar: protectedProcedure
       .input(z.object({
         base64: z.string(),

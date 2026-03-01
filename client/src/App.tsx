@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import MobileBottomNav from "./components/MobileBottomNav";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { CallProvider } from "./contexts/CallContext";
 import { usePushNotifications } from "./hooks/usePushNotifications";
 import Home from "./pages/Home";
 import Feed from "./pages/Feed";
@@ -61,11 +62,13 @@ function App() {
         switchable
       >
         <TooltipProvider>
-          <Toaster />
-          <div className="pb-16 md:pb-0">
-            <Router />
-          </div>
-          <MobileBottomNav />
+          <CallProvider>
+            <Toaster />
+            <div className="pb-16 md:pb-0">
+              <Router />
+            </div>
+            <MobileBottomNav />
+          </CallProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -32,12 +32,11 @@ import {
   Users,
   Archive,
 } from "lucide-react";
-import { useState, useEffect, useRef, useCallback, type RefObject } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
-import { useWebRTCCall } from "@/hooks/useWebRTCCall";
-import CallOverlay from "@/components/CallOverlay";
+import { useCall } from "@/contexts/CallContext";
 import { MediaPreview, ImageLightbox } from "@/components/MediaPreview";
 import VideoPlayer from "@/components/VideoPlayer";
 
@@ -64,7 +63,7 @@ export default function Messages() {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const uploadAudio = trpc.upload.image.useMutation();
+  const uploadAudio = trpc.upload.audio.useMutation();
 
   const startRecording = useCallback(async () => {
     try {
@@ -124,8 +123,8 @@ export default function Messages() {
     setRecordingTime(0);
   }, [isRecording]);
 
-  // WebRTC call hook
-  const webrtcCall = useWebRTCCall(user?.id);
+  // WebRTC call — uses global context so incoming calls ring on any page
+  const webrtcCall = useCall();
 
   // Close settings dropdown on outside click
   useEffect(() => {
@@ -598,13 +597,17 @@ export default function Messages() {
 
                       {/* Voice note in message */}
                       {msg.videoUrl && msg.content === "[voice_note]" && (
-                        <div className="flex items-center gap-2 py-1 min-w-[180px]">
-                          <Mic className="h-4 w-4 flex-shrink-0 opacity-70" />
+                        <div className="flex flex-col gap-1 py-1 min-w-[200px]">
+                          <div className="flex items-center gap-1 opacity-60">
+                            <Mic className="h-3 w-3" />
+                            <span className="text-xs">Voice note</span>
+                          </div>
                           <audio
                             src={msg.videoUrl}
                             controls
-                            className="h-8 w-full"
-                            style={{ minWidth: 140 }}
+                            preload="auto"
+                            className="w-full"
+                            style={{ minWidth: 200, height: 44 }}
                           />
                         </div>
                       )}
@@ -810,22 +813,6 @@ export default function Messages() {
           </motion.div>
         </div>
       )}
-
-      {/* Call Overlay */}
-      <CallOverlay
-        callState={webrtcCall.callState}
-        callInfo={webrtcCall.callInfo}
-        isMuted={webrtcCall.isMuted}
-        isCameraOff={webrtcCall.isCameraOff}
-        callDuration={webrtcCall.callDuration}
-        localVideoRef={webrtcCall.localVideoRef as RefObject<HTMLVideoElement>}
-        remoteVideoRef={webrtcCall.remoteVideoRef as RefObject<HTMLVideoElement>}
-        onHangUp={webrtcCall.hangUp}
-        onAnswer={webrtcCall.answerCall}
-        onDecline={webrtcCall.declineIncoming}
-        onToggleMute={webrtcCall.toggleMute}
-        onToggleCamera={webrtcCall.toggleCamera}
-      />
 
       {/* Image Lightbox */}
       {lightboxImage && (
