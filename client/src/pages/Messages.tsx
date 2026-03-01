@@ -39,6 +39,7 @@ import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { useWebRTCCall } from "@/hooks/useWebRTCCall";
 import CallOverlay from "@/components/CallOverlay";
 import { MediaPreview, ImageLightbox } from "@/components/MediaPreview";
+import VideoPlayer from "@/components/VideoPlayer";
 
 export default function Messages() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
@@ -610,11 +611,10 @@ export default function Messages() {
 
                       {/* Video in message */}
                       {msg.videoUrl && msg.content !== "[voice_note]" && (
-                        <video
+                        <VideoPlayer
                           src={msg.videoUrl}
-                          controls
-                          className="rounded-xl max-w-full max-h-64 mb-2"
-                          preload="metadata"
+                          className="mb-2 rounded-xl"
+                          maxHeight="260px"
                         />
                       )}
 

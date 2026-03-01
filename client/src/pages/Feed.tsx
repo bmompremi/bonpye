@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { LinkPreview } from "@/components/LinkPreview";
 import { optimizeImageForUpload } from "@/lib/imageOptimization";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import VideoPlayer from "@/components/VideoPlayer";
 
 // Mock posts for display when no real posts exist
 const mockPosts = [
@@ -1390,13 +1391,11 @@ export default function Feed() {
 
                       {/* Video */}
                       {post.videoUrl && (
-                        <div className="mt-3 rounded-2xl overflow-hidden border border-border">
-                          <video
-                            src={post.videoUrl}
-                            controls
-                            className="w-full max-h-96"
-                          />
-                        </div>
+                        <VideoPlayer
+                          src={post.videoUrl}
+                          className="mt-3 border border-border"
+                          maxHeight="500px"
+                        />
                       )}
 
                       {/* Actions */}
