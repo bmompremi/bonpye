@@ -57,7 +57,7 @@ export default function CallOverlay({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-gradient-to-b from-gray-900 via-gray-800 to-black flex flex-col items-center justify-center"
+        className="fixed inset-0 z-[60] bg-gradient-to-b from-gray-900 via-gray-800 to-black flex flex-col items-center justify-center"
       >
         {/* Connected video call - show video feeds */}
         {callState === "connected" && isVideoCall && (
@@ -74,7 +74,7 @@ export default function CallOverlay({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute bottom-28 right-4 w-[120px] h-[160px] rounded-xl overflow-hidden border-2 border-white/30 shadow-xl"
+              className="absolute bottom-48 right-4 w-[120px] h-[160px] rounded-xl overflow-hidden border-2 border-white/30 shadow-xl"
             >
               <video
                 ref={localVideoRef}
@@ -139,7 +139,7 @@ export default function CallOverlay({
         )}
 
         {/* Control bar */}
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10">
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-10">
           <div className="flex items-center gap-4">
             {/* Incoming call: Accept + Decline */}
             {callState === "incoming" && (
