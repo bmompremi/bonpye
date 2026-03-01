@@ -1471,6 +1471,7 @@ export default function Feed() {
                       <LinkPreview
                         text={post.content}
                         className="mt-2"
+                        edgeToEdge
                         ogData={post.linkUrl ? {
                           linkUrl: post.linkUrl,
                           linkTitle: post.linkTitle,
@@ -1585,7 +1586,7 @@ export default function Feed() {
                       </div>
                       {/* Inline Reply Box — Telegram style */}
                       {replyingTo === post.id && (
-                        <div className="mt-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
+                        <div className="-ml-[76px] w-[calc(100%+92px)] mt-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
                             <img
                               src={(user as any)?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop"}
@@ -1624,6 +1625,7 @@ export default function Feed() {
 
                       {/* Comment Thread */}
                       {post.id > 0 && (post.repliesCount || 0) > 0 && (
+                        <div className="-ml-[76px] w-[calc(100%+92px)] pl-[76px]">
                         <CommentThread
                           postId={post.id}
                           repliesCount={post.repliesCount || 0}
@@ -1650,6 +1652,7 @@ export default function Feed() {
                           }}
                           formatTime={formatTime}
                         />
+                        </div>
                       )}
                     </div>
                   </div>

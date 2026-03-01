@@ -10,6 +10,7 @@ import LinkPreviewCard from "./LinkPreviewCard";
 interface LinkPreviewProps {
   text: string;
   className?: string;
+  edgeToEdge?: boolean;
   // Server-fetched OG data stored with the post
   ogData?: {
     linkUrl?: string | null;
@@ -103,7 +104,9 @@ function getPlatformName(url: string): string {
   return getDomain(url);
 }
 
-export function LinkPreview({ text, className = "", ogData }: LinkPreviewProps) {
+export function LinkPreview({ text, className = "", edgeToEdge = false, ogData }: LinkPreviewProps) {
+  // When edgeToEdge, cards break out of the indented content column to span full post width
+  const cardWrap = edgeToEdge ? "-ml-[76px] w-[calc(100%+92px)]" : "";
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
@@ -182,101 +185,111 @@ export function LinkPreview({ text, className = "", ogData }: LinkPreviewProps) 
 
       {/* Direct image preview */}
       {firstUrlIsImage && (
-        <div className="mt-3 rounded-xl overflow-hidden border border-border">
-          <img
-            src={firstUrl}
-            alt="Linked image"
-            className="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => {
-              setPreviewUrl(firstUrl);
-              setShowImagePreview(true);
-            }}
-            onError={(e) => {
-              e.currentTarget.parentElement!.style.display = 'none';
-            }}
-          />
+        <div className={cardWrap}>
+          <div className="mt-3 rounded-xl overflow-hidden border border-border">
+            <img
+              src={firstUrl}
+              alt="Linked image"
+              className="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => {
+                setPreviewUrl(firstUrl);
+                setShowImagePreview(true);
+              }}
+              onError={(e) => {
+                e.currentTarget.parentElement!.parentElement!.style.display = 'none';
+              }}
+            />
+          </div>
         </div>
       )}
 
       {/* Direct video preview */}
       {firstUrlIsVideo && (
-        <div className="mt-3 rounded-xl overflow-hidden border border-border bg-black">
-          <video
-            src={firstUrl}
-            controls
-            className="w-full max-h-96"
-            poster=""
-          >
-            Your browser does not support video playback.
-          </video>
+        <div className={cardWrap}>
+          <div className="mt-3 rounded-xl overflow-hidden border border-border bg-black">
+            <video
+              src={firstUrl}
+              controls
+              className="w-full max-h-96"
+              poster=""
+            >
+              Your browser does not support video playback.
+            </video>
+          </div>
         </div>
       )}
 
       {/* YouTube embed preview */}
       {firstUrlIsYouTube && (
-        <div className="mt-3 rounded-xl overflow-hidden border border-border">
-          {!showVideoPlayer ? (
-            <div 
-              className="relative cursor-pointer group"
-              onClick={() => setShowVideoPlayer(true)}
-            >
-              <img
-                src={getPlatformThumbnail(firstUrl)}
-                alt="YouTube video thumbnail"
-                className="w-full h-48 sm:h-64 object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://via.placeholder.com/640x360?text=Video';
-                }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center">
-                  <Play className="h-8 w-8 text-white ml-1" fill="white" />
+        <div className={cardWrap}>
+          <div className="mt-3 rounded-xl overflow-hidden border border-border">
+            {!showVideoPlayer ? (
+              <div
+                className="relative cursor-pointer group"
+                onClick={() => setShowVideoPlayer(true)}
+              >
+                <img
+                  src={getPlatformThumbnail(firstUrl)}
+                  alt="YouTube video thumbnail"
+                  className="w-full h-48 sm:h-64 object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://via.placeholder.com/640x360?text=Video';
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                  <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center">
+                    <Play className="h-8 w-8 text-white ml-1" fill="white" />
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src="https://www.youtube.com/favicon.ico"
+                      alt="YouTube"
+                      className="h-5 w-5"
+                    />
+                    <span className="text-white text-sm font-medium">Watch on YouTube</span>
+                  </div>
                 </div>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                <div className="flex items-center gap-2">
-                  <img 
-                    src="https://www.youtube.com/favicon.ico" 
-                    alt="YouTube" 
-                    className="h-5 w-5"
-                  />
-                  <span className="text-white text-sm font-medium">Watch on YouTube</span>
-                </div>
+            ) : (
+              <div className="relative pt-[56.25%]">
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${getYouTubeId(firstUrl)}?autoplay=1`}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
-            </div>
-          ) : (
-            <div className="relative pt-[56.25%]">
-              <iframe
-                className="absolute inset-0 w-full h-full"
-                src={`https://www.youtube.com/embed/${getYouTubeId(firstUrl)}?autoplay=1`}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
       {/* OG preview card — uses server-fetched data when available */}
       {ogData?.linkUrl && (
-        <LinkPreviewCard
-          url={ogData.linkUrl}
-          title={ogData.linkTitle}
-          description={ogData.linkDescription}
-          image={ogData.linkImage}
-          siteName={ogData.linkSiteName}
-        />
+        <div className={cardWrap}>
+          <LinkPreviewCard
+            url={ogData.linkUrl}
+            title={ogData.linkTitle}
+            description={ogData.linkDescription}
+            image={ogData.linkImage}
+            siteName={ogData.linkSiteName}
+          />
+        </div>
       )}
 
       {/* Fallback card for links without OG data (uses platform thumbnail) */}
       {!ogData?.linkUrl && firstUrl && !firstUrlIsImage && !firstUrlIsVideo && !firstUrlIsYouTube && (
-        <LinkPreviewCard
-          url={firstUrl}
-          image={isYouTubeUrl(firstUrl) ? getPlatformThumbnail(firstUrl) : null}
-          siteName={getPlatformName(firstUrl)}
-        />
+        <div className={cardWrap}>
+          <LinkPreviewCard
+            url={firstUrl}
+            image={isYouTubeUrl(firstUrl) ? getPlatformThumbnail(firstUrl) : null}
+            siteName={getPlatformName(firstUrl)}
+          />
+        </div>
       )}
 
       {/* Full-screen image preview modal */}
