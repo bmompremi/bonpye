@@ -1,4 +1,7 @@
-// Storage helpers — uses Forge API if configured, otherwise local filesystem
+// Storage helpers — priority order:
+//   1. S3 / R2 / Backblaze (if AWS_ACCESS_KEY_ID + AWS_S3_BUCKET set)
+//   2. Forge API (if FORGE_API_URL + FORGE_API_KEY set)
+//   3. Local filesystem (fallback for dev)
 import { ENV } from './_core/env';
 import fs from 'fs';
 import path from 'path';
@@ -12,7 +15,67 @@ function ensureDir(dirPath: string) {
   }
 }
 
-// ─── Local filesystem storage ────────────────────────────────────────────────
+function normalizeKey(relKey: string): string {
+  return relKey.replace(/^\/+/, "");
+}
+
+// ─── S3 / R2 / Backblaze storage ─────────────────────────────────────────────
+
+function getS3Config() {
+  const { awsAccessKeyId, awsSecretAccessKey, awsS3Bucket } = ENV;
+  if (!awsAccessKeyId || !awsSecretAccessKey || !awsS3Bucket) return null;
+  return {
+    accessKeyId: awsAccessKeyId,
+    secretAccessKey: awsSecretAccessKey,
+    bucket: awsS3Bucket,
+    region: ENV.awsRegion || "us-east-1",
+    endpoint: ENV.awsEndpoint || undefined,
+    publicBaseUrl: ENV.awsPublicBaseUrl || "",
+  };
+}
+
+async function s3Put(
+  relKey: string,
+  data: Buffer | Uint8Array | string,
+  contentType: string,
+  config: NonNullable<ReturnType<typeof getS3Config>>
+): Promise<{ key: string; url: string }> {
+  const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+  const key = normalizeKey(relKey);
+  const client = new S3Client({
+    region: config.region,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+    ...(config.endpoint ? { endpoint: config.endpoint, forcePathStyle: true } : {}),
+  });
+
+  const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+
+  await client.send(new PutObjectCommand({
+    Bucket: config.bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+  }));
+
+  // Build public URL
+  let url: string;
+  if (config.publicBaseUrl) {
+    url = `${config.publicBaseUrl.replace(/\/$/, "")}/${key}`;
+  } else if (config.endpoint) {
+    // R2 / custom endpoint — path-style URL
+    url = `${config.endpoint.replace(/\/$/, "")}/${config.bucket}/${key}`;
+  } else {
+    url = `https://${config.bucket}.s3.${config.region}.amazonaws.com/${key}`;
+  }
+
+  console.log(`[Storage] S3 upload: ${key} → ${url}`);
+  return { key, url };
+}
+
+// ─── Local filesystem storage ─────────────────────────────────────────────────
 
 async function localPut(
   relKey: string,
@@ -22,16 +85,13 @@ async function localPut(
   const key = normalizeKey(relKey);
   const filePath = path.join(UPLOADS_DIR, key);
 
-  // Ensure parent directory exists
   ensureDir(path.dirname(filePath));
 
-  // Write file
   const buffer = typeof data === 'string'
     ? Buffer.from(data)
     : Buffer.from(data);
   fs.writeFileSync(filePath, buffer);
 
-  // Return URL relative to server
   const url = `/uploads/${key}`;
   console.log(`[Storage] Local file saved: ${filePath} -> ${url}`);
   return { key, url };
@@ -42,7 +102,7 @@ async function localGet(relKey: string): Promise<{ key: string; url: string }> {
   return { key, url: `/uploads/${key}` };
 }
 
-// ─── Forge API storage (remote) ──────────────────────────────────────────────
+// ─── Forge API storage (remote) ───────────────────────────────────────────────
 
 type StorageConfig = { baseUrl: string; apiKey: string };
 
@@ -71,10 +131,6 @@ async function buildDownloadUrl(baseUrl: string, relKey: string, apiKey: string)
 
 function ensureTrailingSlash(value: string): string {
   return value.endsWith("/") ? value : `${value}/`;
-}
-
-function normalizeKey(relKey: string): string {
-  return relKey.replace(/^\/+/, "");
 }
 
 function toFormData(data: Buffer | Uint8Array | string, contentType: string, fileName: string): FormData {
@@ -113,26 +169,50 @@ async function remotePut(
   return { key, url };
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  const config = getStorageConfig();
-  if (config) {
-    return remotePut(relKey, data, contentType, config);
+  // 1. S3-compatible (AWS / R2 / Backblaze)
+  const s3Config = getS3Config();
+  if (s3Config) {
+    return s3Put(relKey, data, contentType, s3Config);
   }
-  // Fallback to local filesystem
+
+  // 2. Forge API
+  const forgeConfig = getStorageConfig();
+  if (forgeConfig) {
+    return remotePut(relKey, data, contentType, forgeConfig);
+  }
+
+  // 3. Local filesystem (dev only)
   return localPut(relKey, data, contentType);
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
-  const config = getStorageConfig();
-  if (config) {
+  const s3Config = getS3Config();
+  if (s3Config) {
+    // For S3, reconstruct the public URL directly
     const key = normalizeKey(relKey);
-    return { key, url: await buildDownloadUrl(config.baseUrl, key, config.apiKey) };
+    let url: string;
+    if (s3Config.publicBaseUrl) {
+      url = `${s3Config.publicBaseUrl.replace(/\/$/, "")}/${key}`;
+    } else if (s3Config.endpoint) {
+      url = `${s3Config.endpoint.replace(/\/$/, "")}/${s3Config.bucket}/${key}`;
+    } else {
+      url = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`;
+    }
+    return { key, url };
   }
+
+  const forgeConfig = getStorageConfig();
+  if (forgeConfig) {
+    const key = normalizeKey(relKey);
+    return { key, url: await buildDownloadUrl(forgeConfig.baseUrl, key, forgeConfig.apiKey) };
+  }
+
   return localGet(relKey);
 }

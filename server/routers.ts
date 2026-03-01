@@ -131,7 +131,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const buffer = Buffer.from(input.base64, "base64");
         const ext = input.filename.split(".").pop() || "jpg";
-        const key = `uploads/${ctx.user.id}/images/${nanoid()}.${ext}`;
+        const key = `images/${ctx.user.id}/${nanoid()}.${ext}`;
         const { url } = await storagePut(key, buffer, input.contentType);
         return { url };
       }),
@@ -145,7 +145,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const buffer = Buffer.from(input.base64, "base64");
         const ext = input.filename.split(".").pop() || "mp4";
-        const key = `uploads/${ctx.user.id}/videos/${nanoid()}.${ext}`;
+        const key = `videos/${ctx.user.id}/${nanoid()}.${ext}`;
         const { url } = await storagePut(key, buffer, input.contentType);
         return { url };
       }),
@@ -157,7 +157,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const buffer = Buffer.from(input.base64, "base64");
-        const key = `uploads/${ctx.user.id}/avatar-${nanoid()}.jpg`;
+        const key = `avatars/${ctx.user.id}-${nanoid()}.jpg`;
         const { url } = await storagePut(key, buffer, input.contentType);
         await db.updateUserProfile(ctx.user.id, { avatarUrl: url });
         return { url };
@@ -170,7 +170,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const buffer = Buffer.from(input.base64, "base64");
-        const key = `uploads/${ctx.user.id}/header-${nanoid()}.jpg`;
+        const key = `headers/${ctx.user.id}-${nanoid()}.jpg`;
         const { url } = await storagePut(key, buffer, input.contentType);
         await db.updateUserProfile(ctx.user.id, { headerUrl: url });
         return { url };

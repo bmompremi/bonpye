@@ -178,9 +178,9 @@ async function startServer() {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      // Upload to S3
+      // Upload to storage (S3/local)
       const ext = file.originalname.split(".").pop() || "mp4";
-      const key = `uploads/${context.user.id}/videos/${nanoid()}.${ext}`;
+      const key = `videos/${context.user.id}/${nanoid()}.${ext}`;
       const { url } = await storagePut(key, file.buffer, file.mimetype);
 
       console.log(`[Upload] Video uploaded: ${key} by user ${context.user.id} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);

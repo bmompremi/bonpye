@@ -11,4 +11,11 @@ export const ENV = {
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   forgeApiUrl: process.env.FORGE_API_URL ?? "",
   forgeApiKey: process.env.FORGE_API_KEY ?? "",
+  // S3 / R2 / Backblaze storage
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+  awsS3Bucket: process.env.AWS_S3_BUCKET ?? "",
+  awsRegion: process.env.AWS_REGION ?? "us-east-1",
+  awsEndpoint: process.env.AWS_ENDPOINT ?? "",       // optional: for R2/Backblaze
+  awsPublicBaseUrl: process.env.AWS_PUBLIC_BASE_URL ?? "", // optional: custom CDN/public URL prefix
 };
