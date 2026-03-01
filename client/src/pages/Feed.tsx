@@ -1480,24 +1480,26 @@ export default function Feed() {
                         } : null}
                       />
 
-                      {/* Image */}
+                      {/* Image — edge-to-edge within post card */}
                       {post.imageUrl && (
-                        <div className="mt-3 rounded-2xl overflow-hidden border border-border bg-secondary/30">
+                        <div className="-ml-[76px] mt-3 w-[calc(100%+92px)] overflow-hidden rounded-xl">
                           <img
                             src={post.imageUrl}
                             alt="Post image"
-                            className="w-full max-h-[500px] object-contain"
+                            className="w-full max-h-[500px] object-cover"
                           />
                         </div>
                       )}
 
-                      {/* Video */}
+                      {/* Video — edge-to-edge within post card */}
                       {post.videoUrl && (
-                        <VideoPlayer
-                          src={post.videoUrl}
-                          className="mt-3 border border-border"
-                          maxHeight="500px"
-                        />
+                        <div className="-ml-[76px] mt-3 w-[calc(100%+92px)]">
+                          <VideoPlayer
+                            src={post.videoUrl}
+                            className=""
+                            maxHeight="500px"
+                          />
+                        </div>
                       )}
 
                       {/* Actions */}
