@@ -83,18 +83,22 @@ export function useMediaUpload() {
 
         return { imageUrl: result.url };
       } else {
-        // Video: convert to base64 directly
-        const buffer = await preview.file.arrayBuffer();
-        const base64 = btoa(
-          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-        );
+        // Video: use multipart/form-data upload (fast, no base64 overhead)
+        const formData = new FormData();
+        formData.append("video", preview.file);
 
-        const result = await uploadVideoMutation.mutateAsync({
-          base64,
-          filename: preview.file.name,
-          contentType: preview.file.type || "video/mp4",
+        const response = await fetch("/api/upload/video", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
         });
 
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error || "Upload failed");
+        }
+
+        const result = await response.json();
         return { videoUrl: result.url };
       }
     } catch (error) {
