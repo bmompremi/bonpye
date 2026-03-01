@@ -447,6 +447,7 @@ export default function Feed() {
   // Mutations
   const createPost = trpc.post.create.useMutation({
     onSuccess: () => {
+      setIsUploading(false);
       refetchFeed();
       refetchExplore();
       setNewPostText("");
@@ -460,6 +461,7 @@ export default function Feed() {
       toast.success("Posted!");
     },
     onError: () => {
+      setIsUploading(false);
       toast.error("Failed to post. Please try again.");
     },
   });
@@ -533,7 +535,14 @@ export default function Feed() {
   const followingPosts = feedPosts || [];
   const isFollowingTab = activeTab === "following";
   const activePosts = isFollowingTab ? followingPosts : forYouPosts;
-  const displayPosts = activePosts.length > 0 ? activePosts : (isFollowingTab ? [] : mockPosts);
+  // Deduplicate by post ID to prevent any double-render
+  const seenPostIds = new Set<number>();
+  const uniqueActivePosts = activePosts.filter((p: any) => {
+    if (seenPostIds.has(p.id)) return false;
+    seenPostIds.add(p.id);
+    return true;
+  });
+  const displayPosts = uniqueActivePosts.length > 0 ? uniqueActivePosts : (isFollowingTab ? [] : mockPosts);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
