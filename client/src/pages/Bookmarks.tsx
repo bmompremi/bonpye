@@ -1,4 +1,4 @@
-/* BONPYE Bookmarks Page
+/* BIG Bookmarks Page
  * Like Twitter/X bookmarks - Football themed
  */
 

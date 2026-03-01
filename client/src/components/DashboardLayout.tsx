@@ -203,9 +203,9 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <img src="/images/bonpye_logo.gif" alt="BONPYE" className="h-6 w-6 object-contain" />
+                  <img src="/images/bonpye_logo.gif" alt="BIG" className="h-6 w-6 object-contain" />
                   <span className="font-display font-bold tracking-wider truncate">
-                    BONPYE
+                    BIG
                   </span>
                 </div>
               ) : null}

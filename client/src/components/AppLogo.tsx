@@ -1,5 +1,5 @@
-/* BONPYE App Logo
- * Player silhouette + "PYE" stacked vertically on the right
+/* BIG App Logo
+ * Player silhouette + "BIG" stacked vertically on the right
  */
 
 interface AppLogoProps {
@@ -39,7 +39,7 @@ export default function AppLogo({ className = "", size = 80, dark = false }: App
         preserveAspectRatio="xMidYMid meet"
       />
 
-      {/* "PYE" vertical text — stacked letters on right side */}
+      {/* "BIG" vertical text — stacked letters on right side */}
       <text
         x="218"
         y="40"
@@ -50,7 +50,7 @@ export default function AppLogo({ className = "", size = 80, dark = false }: App
         textAnchor="middle"
         letterSpacing="2"
       >
-        P
+        B
       </text>
       <text
         x="218"
@@ -62,7 +62,7 @@ export default function AppLogo({ className = "", size = 80, dark = false }: App
         textAnchor="middle"
         letterSpacing="2"
       >
-        Y
+        I
       </text>
       <text
         x="218"
@@ -74,7 +74,7 @@ export default function AppLogo({ className = "", size = 80, dark = false }: App
         textAnchor="middle"
         letterSpacing="2"
       >
-        E
+        G
       </text>
     </svg>
   );

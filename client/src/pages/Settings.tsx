@@ -1,4 +1,4 @@
-/* BONPYE Settings Page
+/* BIG Settings Page
  * Like Twitter/X settings
  */
 
@@ -43,7 +43,7 @@ const settingSections = [
     items: [
       { icon: User, label: "Account information", description: "See your account information like your phone number and email address." },
       { icon: Key, label: "Change your password", description: "Change your password at any time." },
-      { icon: Smartphone, label: "Download your data", description: "Get a copy of your BONPYE data." },
+      { icon: Smartphone, label: "Download your data", description: "Get a copy of your BIG data." },
       { icon: Shield, label: "Player Verification", description: "Verify your player identity to get the verified badge." },
     ],
   },
@@ -67,7 +67,7 @@ const settingSections = [
     title: "Notifications",
     items: [
       { icon: Bell, label: "Push notifications", description: "Manage your mobile and desktop notifications." },
-      { icon: Bell, label: "Email notifications", description: "Manage what emails you receive from BONPYE." },
+      { icon: Bell, label: "Email notifications", description: "Manage what emails you receive from BIG." },
     ],
   },
   {
@@ -80,7 +80,7 @@ const settingSections = [
   {
     title: "Additional resources",
     items: [
-      { icon: HelpCircle, label: "Help Center", description: "Get help with BONPYE." },
+      { icon: HelpCircle, label: "Help Center", description: "Get help with BIG." },
     ],
   },
 ];
@@ -212,8 +212,8 @@ export default function Settings() {
 
         {/* App Info */}
         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-          <img src="/images/bonpye_logo.gif" alt="BONPYE" className="w-12 h-12 mx-auto mb-2 object-contain" />
-          <p>BONPYE v1.0.0</p>
+          <img src="/images/bonpye_logo.gif" alt="BIG" className="w-12 h-12 mx-auto mb-2 object-contain" />
+          <p>BIG v1.0.0</p>
           <p>By Players. For Players.</p>
         </div>
       </div>

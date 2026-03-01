@@ -1,4 +1,4 @@
-/* BONPYE Feed Page
+/* BIG Feed Page
  * Football identity social network
  * Core social features: posts, likes, comments, shares, messaging
  */
@@ -165,7 +165,7 @@ const mockPosts = [
   {
     id: -6,
     userId: 0,
-    content: "Just got my BONPYE Player Verification badge! 🎉 Months of submitting documents and it's finally done.\n\nIf you're serious about being scouted, get verified. It makes a real difference. #PlayerVerification #BONPYE",
+    content: "Just got my BIG Player Verification badge! 🎉 Months of submitting documents and it's finally done.\n\nIf you're serious about being scouted, get verified. It makes a real difference. #PlayerVerification #BIG",
     imageUrl: null,
     videoUrl: null,
     createdAt: new Date(Date.now() - 16 * 60 * 60 * 1000),
@@ -864,9 +864,9 @@ export default function Feed() {
       <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-20 lg:w-64 border-r border-border p-4 z-50 bg-background">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 p-3 mb-4">
-          <img src="/images/bonpye_logo.gif" alt="BONPYE" className="h-10 w-10 object-contain" />
+          <img src="/images/bonpye_logo.gif" alt="BIG" className="h-10 w-10 object-contain" />
           <span className="font-display text-xl font-bold tracking-wider hidden lg:block">
-            BONPYE
+            BIG
           </span>
         </Link>
 
@@ -925,7 +925,7 @@ export default function Feed() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search BONPYE"
+            placeholder="Search BIG"
             className="w-full bg-secondary rounded-full py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -1005,15 +1005,6 @@ export default function Feed() {
           </div>
         )}
 
-        {/* Test Mode Banner */}
-        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white text-center py-2.5 px-4 font-semibold text-sm flex items-center justify-center gap-2 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]" />
-          <span className="relative flex items-center gap-2">
-            <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="font-display tracking-wide uppercase">🧪 Test Mode</span>
-            <span className="text-white/90 font-normal normal-case">— You&apos;re previewing BONPYE. Some features are limited.</span>
-          </span>
-        </div>
 
         {/* Install App Banner */}
         {isInstallable && !installDismissed && !isInstalled && (
@@ -1025,7 +1016,7 @@ export default function Feed() {
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-sm">Install BONPYE App</p>
+                <p className="font-bold text-sm">Install BIG App</p>
                 <p className="text-xs text-white/80 truncate">Get the full app experience on your device</p>
               </div>
             </div>
@@ -1034,7 +1025,7 @@ export default function Feed() {
                 onClick={async () => {
                   const success = await install();
                   if (success) {
-                    toast.success("BONPYE app installed!");
+                    toast.success("BIG app installed!");
                   }
                 }}
                 className="bg-white text-primary font-bold text-sm px-4 py-1.5 rounded-full hover:bg-white/90 transition-colors"
@@ -1569,10 +1560,10 @@ export default function Feed() {
                           onClick={(e) => {
                             e.stopPropagation();
                             const shareUrl = window.location.origin + `/post/${post.id}`;
-                            const shareText = post.content?.substring(0, 100) || "Check out this post on BONPYE";
+                            const shareText = post.content?.substring(0, 100) || "Check out this post on BIG";
                             if (navigator.share) {
                               navigator.share({
-                                title: "BONPYE",
+                                title: "BIG",
                                 text: shareText,
                                 url: shareUrl,
                               }).catch(() => {});

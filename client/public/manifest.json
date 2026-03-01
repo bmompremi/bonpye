@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "BONPYE - Football Identity Network",
-  "short_name": "BONPYE",
+  "name": "BIG - Football Identity Network",
+  "short_name": "BIG",
   "description": "The football identity social network. Connect with players, fans, and clubs.",
   "start_url": "/feed",
   "scope": "/",
@@ -63,7 +63,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "BONPYE Football Network"
+      "label": "BIG Football Network"
     }
   ]
 }

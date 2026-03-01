@@ -1,4 +1,4 @@
-/* BONPYE Home - Landing Page
+/* BIG Home - Landing Page
  * Like Twitter/X login page - simple and focused
  */
 
@@ -71,11 +71,11 @@ export default function Home() {
           >
             <img
               src="/images/bonpye_logo.gif"
-              alt="BONPYE"
+              alt="BIG"
               className="w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 object-contain"
             />
             <h2 className="font-display text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-widest mt-2">
-              BONPYE<sup className="text-xs sm:text-sm align-super">™</sup>
+              BIG<sup className="text-xs sm:text-sm align-super">™</sup>
             </h2>
           </motion.div>
         </div>
@@ -92,7 +92,7 @@ export default function Home() {
                 Own your football identity.
               </h1>
               <h2 className="font-display text-base leading-tight sm:text-xl md:text-3xl font-bold mb-6 sm:mb-8 break-words">
-                Join the global football community on BONPYE.
+                Join the global football community on BIG.
               </h2>
 
               {/* Sign Up Options */}
@@ -170,7 +170,7 @@ export default function Home() {
               {link}
             </button>
           ))}
-          <span>© 2026 BONPYE</span>
+          <span>© 2026 BIG</span>
         </div>
       </footer>
     </div>

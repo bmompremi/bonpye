@@ -703,7 +703,7 @@ export default function Profile() {
                             onClick={() => {
                               if (navigator.share) {
                                 navigator.share({
-                                  title: "BONPYE Post",
+                                  title: "BIG Post",
                                   text: post.content,
                                   url: window.location.origin + `/post/${post.id}`,
                                 });

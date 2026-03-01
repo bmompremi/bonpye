@@ -1,4 +1,4 @@
-/* BONPYE Messages - Direct Messaging
+/* BIG Messages - Direct Messaging
  * With media uploads, voice & video calls
  */
 

@@ -1,4 +1,4 @@
-/* BONPYE Notifications Page
+/* BIG Notifications Page
  * Real notifications from database with clickable user profiles
  */
 

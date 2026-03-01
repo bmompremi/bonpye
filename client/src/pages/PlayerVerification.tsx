@@ -143,7 +143,7 @@ export default function PlayerVerification() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Player Verification</h1>
           <p className="text-muted-foreground">
-            Verify your identity as a footballer to unlock the Player Verified badge on BONPYE.
+            Verify your identity as a footballer to unlock the Player Verified badge on BIG.
           </p>
         </div>
 

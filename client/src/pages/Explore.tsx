@@ -1,4 +1,4 @@
-/* BONPYE Explore/Search Page
+/* BIG Explore/Search Page
  * Football trending topics and discovery
  */
 
@@ -64,7 +64,7 @@ export default function Explore() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search BONPYE"
+              placeholder="Search BIG"
               className="w-full bg-secondary rounded-full py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
