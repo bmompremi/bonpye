@@ -1046,35 +1046,16 @@ export default function Feed() {
         {/* Header */}
         <header className="sticky top-0 bg-background/95 backdrop-blur-md border-b border-border z-40">
           {/* Facebook-style top bar — mobile only (desktop uses sidebar) */}
-          <div className="md:hidden flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLocation("/settings")}
-                className="p-2 hover:bg-secondary rounded-full transition-colors"
-              >
-                <Menu className="h-6 w-6" />
-              </button>
-              <span className="font-display text-3xl font-black tracking-wider text-primary">BIG</span>
-            </div>
-            <div className="flex items-center gap-0.5">
-              <button
-                onClick={() => setLocation("/explore")}
-                className="p-2 hover:bg-secondary rounded-full transition-colors"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setLocation("/notifications")}
-                className="p-2 hover:bg-secondary rounded-full transition-colors"
-              >
-                <Bell className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setLocation("/messages")}
-                className="p-2 hover:bg-secondary rounded-full transition-colors"
-              >
-                <MessageCircle className="h-5 w-5" />
-              </button>
+          <div className="md:hidden flex items-center gap-3 px-3 py-2">
+            <button
+              onClick={() => setLocation("/settings")}
+              className="p-2 hover:bg-secondary rounded-full transition-colors flex-shrink-0"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <div className="flex flex-col leading-none">
+              <span className="font-display text-3xl font-black tracking-wider text-primary leading-none">BIG</span>
+              <span className="text-[10px] text-muted-foreground font-normal tracking-wide mt-0.5">BONPYE Internet Global</span>
             </div>
           </div>
 
