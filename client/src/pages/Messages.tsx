@@ -210,7 +210,7 @@ export default function Messages() {
     if (!targetUserId) return;
     const id = parseInt(targetUserId, 10);
     if (!id || id === user.id) return;
-    getOrCreateConversationMutation.mutate({ participantId: id });
+    getOrCreateConversationMutation.mutate({ userId: id });
     // Clear the param so reloading doesn't re-trigger
     window.history.replaceState(null, "", "/messages");
   // eslint-disable-next-line react-hooks/exhaustive-deps

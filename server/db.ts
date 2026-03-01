@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { InsertUser, users, pushSubscriptions } from "../drizzle/schema";
@@ -37,7 +37,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "loginMethod", "avatarUrl"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -49,6 +49,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
 
     textFields.forEach(assignNullable);
+
+    // Handle: set on insert only — don't overwrite if user already has one
+    if (user.handle !== undefined && user.handle !== null) {
+      values.handle = user.handle;
+      // Only update if currently null (preserves custom handles)
+      updateSet.handle = sql`COALESCE(${users.handle}, ${user.handle})`;
+    }
 
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
