@@ -56,12 +56,12 @@ export function useWebRTCCall(userId?: number) {
     refetchInterval: 1500,
   });
 
-  // Caller polls call record to detect decline/missed
+  // Caller polls call record to detect decline/missed/connected
   const callInfoId = callInfo?.callId;
   const { data: callStatusData } = trpc.calls.getById.useQuery(
     { callId: callInfoId || 0 },
     {
-      enabled: callState === "ringing" && !!callInfoId,
+      enabled: (callState === "ringing" || callState === "connecting") && !!callInfoId,
       refetchInterval: 2000,
     }
   );
@@ -82,9 +82,9 @@ export function useWebRTCCall(userId?: number) {
     }
   }, [incomingCall, callState, updateCallState]);
 
-  // Caller: detect when receiver declines
+  // Caller: detect when receiver declines OR has answered (status = connected)
   useEffect(() => {
-    if (!callStatusData || callState !== "ringing") return;
+    if (!callStatusData || (callState !== "ringing" && callState !== "connecting")) return;
     if (callStatusData.status === "declined") {
       if (ringTimeoutRef.current) {
         clearTimeout(ringTimeoutRef.current);
@@ -94,6 +94,9 @@ export function useWebRTCCall(userId?: number) {
       updateCallState("idle");
       setCallInfo(null);
       toast("Call declined");
+    } else if (callStatusData.status === "connected" && callState === "ringing") {
+      // Receiver answered — show "connecting" on caller side while ICE negotiates
+      updateCallState("connecting");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callStatusData, callState]);
@@ -121,6 +124,23 @@ export function useWebRTCCall(userId?: number) {
             iceServers: [
               { urls: "stun:stun.l.google.com:19302" },
               { urls: "stun:stun1.l.google.com:19302" },
+              { urls: "stun:stun.cloudflare.com:3478" },
+              // Public TURN servers for NAT traversal (mobile networks, carrier NAT)
+              {
+                urls: "turn:openrelay.metered.ca:80",
+                username: "openrelayproject",
+                credential: "openrelayproject",
+              },
+              {
+                urls: "turn:openrelay.metered.ca:443",
+                username: "openrelayproject",
+                credential: "openrelayproject",
+              },
+              {
+                urls: "turn:openrelay.metered.ca:443?transport=tcp",
+                username: "openrelayproject",
+                credential: "openrelayproject",
+              },
             ],
           },
         });
@@ -132,7 +152,29 @@ export function useWebRTCCall(userId?: number) {
 
         peer.on("error", (err: any) => {
           console.error("PeerJS error:", err);
-          reject(err);
+          // During init, reject the promise
+          if (!peerRef.current) {
+            reject(err);
+            return;
+          }
+          // Runtime errors after connection is established
+          const errType = err?.type || "";
+          if (errType === "peer-unavailable") {
+            toast.error("Could not reach the other person. They may be offline.");
+          } else if (errType === "network" || errType === "disconnected") {
+            toast.error("Network error. Check your connection.");
+          } else if (errType === "server-error") {
+            toast.error("Call server error. Please try again.");
+          }
+          // Clean up on runtime errors
+          if (callStateRef.current !== "idle") {
+            const ci = callInfoRef.current;
+            if (ci) endMutation.mutateAsync({ callId: ci.callId }).catch(() => {});
+            cleanup();
+            callStateRef.current = "idle";
+            setCallState("idle");
+            setCallInfo(null);
+          }
         });
 
         // Caller side: fires when the receiver calls back via peer.call()
@@ -164,7 +206,7 @@ export function useWebRTCCall(userId?: number) {
             });
 
             mediaConnection.on("close", () => {
-              if (callStateRef.current === "connected") {
+              if (callStateRef.current === "connected" || callStateRef.current === "connecting") {
                 const ci = callInfoRef.current;
                 if (ci) {
                   endMutation.mutateAsync({ callId: ci.callId }).catch(() => {});
@@ -306,6 +348,16 @@ export function useWebRTCCall(userId?: number) {
 
       if (callInfo.callerPeerId && localStreamRef.current) {
         const conn = peer.call(callInfo.callerPeerId, localStreamRef.current);
+
+        if (!conn) {
+          // Caller hung up or peer not reachable
+          cleanup();
+          updateCallState("idle");
+          setCallInfo(null);
+          toast.error("Could not connect to caller. They may have hung up.");
+          return;
+        }
+
         callConnectionRef.current = conn;
 
         conn.on("stream", (remoteStream: MediaStream) => {
@@ -320,8 +372,21 @@ export function useWebRTCCall(userId?: number) {
           }
         });
 
+        conn.on("error", (err: any) => {
+          console.error("Call connection error:", err);
+          if (callStateRef.current !== "idle") {
+            const ci = callInfoRef.current;
+            if (ci) endMutation.mutateAsync({ callId: ci.callId }).catch(() => {});
+            cleanup();
+            callStateRef.current = "idle";
+            setCallState("idle");
+            setCallInfo(null);
+            toast.error("Call connection failed.");
+          }
+        });
+
         conn.on("close", () => {
-          if (callStateRef.current === "connected") {
+          if (callStateRef.current === "connected" || callStateRef.current === "connecting") {
             cleanup();
             callStateRef.current = "idle";
             setCallState("idle");

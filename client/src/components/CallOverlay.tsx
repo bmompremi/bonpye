@@ -113,8 +113,13 @@ export default function CallOverlay({
                 {callInfo.partnerName}
               </h2>
               <p className="text-white/60 mt-1">
-                {callState === "connecting" && "Connecting..."}
-                {callState === "ringing" && "Calling..."}
+                {callState === "connecting" && (
+                  <span className="flex items-center gap-1 justify-center">
+                    <span className="inline-block w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                    Connecting…
+                  </span>
+                )}
+                {callState === "ringing" && "Calling…"}
                 {callState === "incoming" &&
                   `Incoming ${callInfo.type} call`}
                 {callState === "connected" && (
