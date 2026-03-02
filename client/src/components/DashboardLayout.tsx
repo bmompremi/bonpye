@@ -25,6 +25,8 @@ import {
   Bell,
   Bookmark,
   Calendar,
+  Check,
+  Copy,
   Home,
   LogOut,
   MapPin,
@@ -32,15 +34,78 @@ import {
   PanelLeft,
   Search,
   Settings,
+  Share2,
   Shield,
   Trophy,
   User,
   Users,
+  X,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { QRCodeSVG } from "qrcode.react";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+
+const APP_URL = typeof window !== "undefined" ? window.location.origin : "https://bonpye-production.up.railway.app";
+
+function ShareModal({ onClose }: { onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(APP_URL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const shareLink = () => {
+    if (navigator.share) {
+      navigator.share({ title: "BIG Platform", text: "Join me on BIG — the football social network!", url: APP_URL });
+    } else {
+      copyLink();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-background border rounded-2xl p-6 w-80 flex flex-col items-center gap-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between w-full">
+          <h2 className="font-bold text-lg">Share BIG</h2>
+          <button onClick={onClose} className="rounded-full p-1 hover:bg-accent transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl">
+          <QRCodeSVG value={APP_URL} size={200} level="H" />
+        </div>
+
+        <div className="text-center">
+          <p className="font-semibold text-sm">BIG Platform</p>
+          <p className="text-xs text-muted-foreground mt-0.5">BONPYE Internet Global</p>
+        </div>
+
+        <div className="flex gap-2 w-full">
+          <button
+            onClick={copyLink}
+            className="flex-1 flex items-center justify-center gap-2 border rounded-xl py-2.5 text-sm font-medium hover:bg-accent transition-colors"
+          >
+            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            {copied ? "Copied!" : "Copy Link"}
+          </button>
+          <button
+            onClick={shareLink}
+            className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const menuItems = [
   { icon: Home, label: "Feed", path: "/feed" },
@@ -144,6 +209,7 @@ function DashboardLayoutContent({
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
@@ -232,6 +298,16 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                 );
               })}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setShowShare(true)}
+                  tooltip="Share BIG"
+                  className="h-10 transition-all font-normal"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>Share BIG</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
 
@@ -314,6 +390,8 @@ function DashboardLayoutContent({
           })}
         </nav>
       )}
+
+      {showShare && <ShareModal onClose={() => setShowShare(false)} />}
     </>
   );
 }
