@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
+import { trpc } from "@/lib/trpc";
 import {
   Bell,
   Bookmark,
@@ -204,12 +205,17 @@ function DashboardLayoutContent({
   children,
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const [showShare, setShowShare] = useState(false);
+
+  const { data: unreadCount = 0 } = trpc.notification.getUnreadCount.useQuery(
+    undefined,
+    { enabled: !!isAuthenticated, refetchInterval: 5000 }
+  );
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
@@ -282,6 +288,7 @@ function DashboardLayoutContent({
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
                 const isActive = location === item.path;
+                const showBadge = item.path === "/notifications" && unreadCount > 0;
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
@@ -290,10 +297,20 @@ function DashboardLayoutContent({
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal`}
                     >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
+                      <div className="relative">
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                        {showBadge && (
+                          <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        )}
+                      </div>
                       <span>{item.label}</span>
+                      {showBadge && (
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -375,6 +392,7 @@ function DashboardLayoutContent({
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border flex items-center justify-around h-16 px-2 safe-area-pb">
           {bottomNavItems.map(item => {
             const isActive = location === item.path;
+            const showBadge = item.path === "/notifications" && unreadCount > 0;
             return (
               <button
                 key={item.path}
@@ -383,7 +401,14 @@ function DashboardLayoutContent({
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <item.icon className={`h-5 w-5 ${isActive ? "fill-current" : ""}`} strokeWidth={isActive ? 2.5 : 1.8} />
+                <div className="relative">
+                  <item.icon className={`h-5 w-5 ${isActive ? "fill-current" : ""}`} strokeWidth={isActive ? 2.5 : 1.8} />
+                  {showBadge && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-medium leading-none">{item.label}</span>
               </button>
             );

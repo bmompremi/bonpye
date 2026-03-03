@@ -7,6 +7,37 @@ import * as db from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import axios from "axios";
+import webpush from "web-push";
+
+// Configure web-push VAPID keys
+if (process.env.VAPID_PRIVATE_KEY && process.env.VITE_VAPID_PUBLIC_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL || "mailto:admin@bonpye.com",
+    process.env.VITE_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
+async function sendPushToUser(userId: number, payload: { title: string; body: string; url?: string }) {
+  try {
+    const subscriptions = await db.getPushSubscriptions(userId);
+    for (const sub of subscriptions) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
+          JSON.stringify(payload)
+        );
+      } catch (err: any) {
+        // Remove expired/invalid subscriptions
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await db.deletePushSubscription(sub.endpoint);
+        }
+      }
+    }
+  } catch (e) {
+    // Non-critical — don't let push failure break message sending
+  }
+}
 
 // Fetch Open Graph / link preview metadata from a URL
 async function fetchLinkPreview(url: string) {
@@ -487,6 +518,7 @@ export const appRouter = router({
         );
 
         const participants = await db.getConversationParticipants(input.conversationId);
+        const sender = await db.getUserById(ctx.user.id);
         for (const participant of participants) {
           if (participant.id !== ctx.user.id) {
             await db.createNotification({
@@ -494,6 +526,14 @@ export const appRouter = router({
               type: "message",
               actorId: ctx.user.id,
               messageId: messageId,
+            });
+            // Send push notification
+            const senderName = sender?.name || sender?.handle || "Someone";
+            const preview = input.content.length > 60 ? input.content.slice(0, 60) + "…" : input.content;
+            await sendPushToUser(participant.id, {
+              title: `💬 ${senderName}`,
+              body: preview,
+              url: "/messages",
             });
           }
         }
