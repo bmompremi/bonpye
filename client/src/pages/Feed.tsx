@@ -584,35 +584,35 @@ export default function Feed() {
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    // Check file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+
+    // Check file size (max 500MB)
+    const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error("Video too large! Maximum size is 50MB.");
-      e.target.value = ''; // Reset input
-      return;
-    }
-    
-    // Check video format
-    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Unsupported video format. Please use MP4, WebM, or MOV.");
+      toast.error("Video too large! Maximum size is 500MB.");
       e.target.value = '';
       return;
     }
-    
+
+    // iOS Safari can report empty MIME type — fall back to extension check
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const allowedExts = ['mp4', 'mov', 'webm', 'avi', 'm4v', '3gp'];
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/3gpp', ''];
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
+      toast.error("Unsupported video format. Please use MP4 or MOV.");
+      e.target.value = '';
+      return;
+    }
+
     // Clear image if selecting video
     setSelectedImage(null);
     setImagePreview(null);
-    
+
     setSelectedVideo(file);
     toast.info(`Video selected: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setVideoPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+
+    // Use createObjectURL — avoids loading entire file into memory (safer on iOS)
+    const objectUrl = URL.createObjectURL(file);
+    setVideoPreview(objectUrl);
   };
 
   const clearMedia = () => {

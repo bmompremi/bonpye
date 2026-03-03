@@ -3,8 +3,8 @@ import { trpc } from "@/lib/trpc";
 import { scaleImage, IMAGE_SIZES } from "@/lib/imageOptimization";
 import { toast } from "sonner";
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;   // 10MB
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024;  // 500MB
 
 interface MediaPreviewData {
   url: string;
@@ -24,13 +24,16 @@ export function useMediaUpload() {
     if (!fileInputRef.current) return;
     fileInputRef.current.accept = type === "image"
       ? "image/jpeg,image/png,image/gif,image/webp"
-      : "video/mp4,video/quicktime,video/webm";
+      : "video/*"; // video/* is required on iOS Safari to show all videos
     fileInputRef.current.click();
   }, []);
 
   const handleFileSelect = useCallback((file: File) => {
+    // iOS Safari can report empty MIME type — check extension as fallback
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const videoExts = ['mp4', 'mov', 'webm', 'avi', 'm4v', '3gp'];
     const isImage = file.type.startsWith("image/");
-    const isVideo = file.type.startsWith("video/");
+    const isVideo = file.type.startsWith("video/") || videoExts.includes(ext);
 
     if (!isImage && !isVideo) {
       toast.error("Please select an image or video file");
@@ -43,7 +46,7 @@ export function useMediaUpload() {
     }
 
     if (isVideo && file.size > MAX_VIDEO_SIZE) {
-      toast.error("Video must be under 50MB");
+      toast.error("Video must be under 500MB");
       return;
     }
 

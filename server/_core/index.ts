@@ -56,8 +56,8 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "500mb" }));
+  app.use(express.urlencoded({ limit: "500mb", extended: true }));
 
   // ── Google OAuth ────────────────────────────────────────────────────────────
   app.get("/api/auth/google", (req, res) => {
@@ -160,7 +160,7 @@ async function startServer() {
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 100 * 1024 * 1024, // 100MB max
+      fileSize: 500 * 1024 * 1024, // 500MB max
     },
   });
 
