@@ -22,6 +22,7 @@ import {
   Sun,
   Trophy,
   User,
+  UserMinus,
   Volume2,
   X,
 } from "lucide-react";
@@ -39,6 +40,7 @@ type PanelKey =
   | "download"
   | "notifications"
   | "privacy"
+  | "mute-block"
   | "display"
   | "help"
   | null;
@@ -65,7 +67,7 @@ const settingSections = [
     title: "Privacy and safety",
     items: [
       { icon: Eye,     label: "Privacy",       description: "Control who can see your posts", panel: "privacy" as PanelKey },
-      { icon: Volume2, label: "Mute and block", description: "Manage muted or blocked accounts", panel: null },
+      { icon: Volume2, label: "Mute and block", description: "Manage muted or blocked accounts", panel: "mute-block" as PanelKey },
     ],
   },
   {
@@ -716,6 +718,90 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Mute & Block Panel ───────────────────────────────────────────────────────
+
+function MuteBlockPanel({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<"muted" | "blocked">("muted");
+  const utils = trpc.useUtils();
+
+  const { data: mutedUsers = [], isLoading: mutedLoading } = trpc.user.getMuted.useQuery();
+  const { data: blockedUsers = [], isLoading: blockedLoading } = trpc.user.getBlocked.useQuery();
+
+  const unmute = trpc.user.unmute.useMutation({
+    onSuccess: () => { utils.user.getMuted.invalidate(); toast.success("User unmuted"); },
+  });
+  const unblock = trpc.user.unblock.useMutation({
+    onSuccess: () => { utils.user.getBlocked.invalidate(); toast.success("User unblocked"); },
+  });
+
+  const list = tab === "muted" ? mutedUsers : blockedUsers;
+  const loading = tab === "muted" ? mutedLoading : blockedLoading;
+
+  return (
+    <SlidePanel title="Mute and block" onClose={onClose}>
+      <div className="max-w-lg">
+        {/* Tabs */}
+        <div className="flex border border-border rounded-xl overflow-hidden mb-5">
+          {(["muted", "blocked"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors capitalize ${
+                tab === t ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"
+              }`}
+            >
+              {t} ({t === "muted" ? mutedUsers.length : blockedUsers.length})
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-muted-foreground text-center py-8 animate-pulse">Loading…</p>
+        ) : list.length === 0 ? (
+          <div className="text-center py-12 space-y-2">
+            <UserMinus className="h-10 w-10 text-muted-foreground mx-auto" />
+            <p className="text-sm font-medium">No {tab} accounts</p>
+            <p className="text-xs text-muted-foreground">
+              {tab === "muted"
+                ? "Muted accounts won't appear in your feed."
+                : "Blocked accounts can't see your posts or contact you."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(list as any[]).map((u) => (
+              <div key={u.id} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                  {u.avatarUrl
+                    ? <img src={u.avatarUrl} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
+                    : u.name?.charAt(0).toUpperCase() ?? "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{u.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">@{u.handle}</p>
+                </div>
+                <button
+                  onClick={() => tab === "muted" ? unmute.mutate({ userId: u.id }) : unblock.mutate({ userId: u.id })}
+                  disabled={unmute.isPending || unblock.isPending}
+                  className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-accent transition-colors font-medium"
+                >
+                  {tab === "muted" ? "Unmute" : "Unblock"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 p-4 bg-secondary/30 rounded-xl text-sm text-muted-foreground">
+          {tab === "muted"
+            ? "To mute someone, tap ••• on their post or profile and select Mute."
+            : "To block someone, tap ••• on their post or profile and select Block."}
+        </div>
+      </div>
+    </SlidePanel>
+  );
+}
+
 // ─── Main Settings page ───────────────────────────────────────────────────────
 
 export default function Settings() {
@@ -874,6 +960,7 @@ export default function Settings() {
         {activePanel === "download"      && <DownloadDataPanel onClose={() => setActivePanel(null)} />}
         {activePanel === "notifications" && <NotificationsPanel onClose={() => setActivePanel(null)} />}
         {activePanel === "privacy"       && <PrivacyPanel      onClose={() => setActivePanel(null)} />}
+        {activePanel === "mute-block"    && <MuteBlockPanel    onClose={() => setActivePanel(null)} />}
         {activePanel === "display"       && <DisplayPanel      onClose={() => setActivePanel(null)} />}
         {activePanel === "help"          && <HelpPanel         onClose={() => setActivePanel(null)} />}
       </AnimatePresence>

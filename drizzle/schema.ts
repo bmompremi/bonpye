@@ -400,6 +400,30 @@ export type Ground = typeof grounds.$inferSelect;
 export type InsertGround = typeof grounds.$inferInsert;
 
 /**
+ * Mutes
+ */
+export const mutes = pgTable("mutes", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  mutedUserId: integer("mutedUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Mute = typeof mutes.$inferSelect;
+
+/**
+ * Blocks
+ */
+export const blocks = pgTable("blocks", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  blockedUserId: integer("blockedUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Block = typeof blocks.$inferSelect;
+
+/**
  * Push Notification Subscriptions
  */
 export const pushSubscriptions = pgTable("push_subscriptions", {

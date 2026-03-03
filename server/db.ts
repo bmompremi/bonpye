@@ -113,7 +113,9 @@ import {
   notifications, InsertNotification,
   squads,
   squadMembers,
-  callRecords, InsertCallRecord
+  callRecords, InsertCallRecord,
+  mutes,
+  blocks,
 } from "../drizzle/schema";
 
 // ============ USER FUNCTIONS ============
@@ -1368,4 +1370,58 @@ export async function getGroundById(id: number) {
 
   const result = await db.select().from(grounds).where(eq(grounds.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+// ============ MUTE FUNCTIONS ============
+
+export async function muteUser(userId: number, mutedUserId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const existing = await db.select().from(mutes)
+    .where(and(eq(mutes.userId, userId), eq(mutes.mutedUserId, mutedUserId))).limit(1);
+  if (existing.length > 0) return false;
+  await db.insert(mutes).values({ userId, mutedUserId });
+  return true;
+}
+
+export async function unmuteUser(userId: number, mutedUserId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(mutes).where(and(eq(mutes.userId, userId), eq(mutes.mutedUserId, mutedUserId)));
+}
+
+export async function getMutedUsers(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: users.id, name: users.name, handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(mutes)
+    .innerJoin(users, eq(users.id, mutes.mutedUserId))
+    .where(eq(mutes.userId, userId));
+}
+
+// ============ BLOCK FUNCTIONS ============
+
+export async function blockUser(userId: number, blockedUserId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const existing = await db.select().from(blocks)
+    .where(and(eq(blocks.userId, userId), eq(blocks.blockedUserId, blockedUserId))).limit(1);
+  if (existing.length > 0) return false;
+  await db.insert(blocks).values({ userId, blockedUserId });
+  return true;
+}
+
+export async function unblockUser(userId: number, blockedUserId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(blocks).where(and(eq(blocks.userId, userId), eq(blocks.blockedUserId, blockedUserId)));
+}
+
+export async function getBlockedUsers(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: users.id, name: users.name, handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(blocks)
+    .innerJoin(users, eq(users.id, blocks.blockedUserId))
+    .where(eq(blocks.userId, userId));
 }

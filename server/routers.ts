@@ -118,6 +118,44 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getFollowCounts(input.userId);
       }),
+
+    mute: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.muteUser(ctx.user.id, input.userId);
+        return { muted: true };
+      }),
+
+    unmute: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.unmuteUser(ctx.user.id, input.userId);
+        return { muted: false };
+      }),
+
+    getMuted: protectedProcedure
+      .query(async ({ ctx }) => {
+        return db.getMutedUsers(ctx.user.id);
+      }),
+
+    block: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.blockUser(ctx.user.id, input.userId);
+        return { blocked: true };
+      }),
+
+    unblock: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.unblockUser(ctx.user.id, input.userId);
+        return { blocked: false };
+      }),
+
+    getBlocked: protectedProcedure
+      .query(async ({ ctx }) => {
+        return db.getBlockedUsers(ctx.user.id);
+      }),
   }),
 
   // ============ FILE UPLOAD ROUTES ============
