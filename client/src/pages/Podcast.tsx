@@ -8,7 +8,7 @@ import { useState } from "react";
 //   2. Tap "Podcast" tab → your show
 //   3. Tap Share → Copy link
 //   4. The ID is the part after: open.spotify.com/show/
-const SPOTIFY_SHOW_ID = "YOUR_SHOW_ID_HERE";
+const SPOTIFY_SHOW_ID = "6g45iCaXSobnH38YMc0ZZw";
 const hasShowId = SPOTIFY_SHOW_ID !== "YOUR_SHOW_ID_HERE";
 
 const TAGS = ["#FoutbòlAyisyen", "#BonpyeSoccerTalk", "#Haiti", "#Football", "#Podcast"];
