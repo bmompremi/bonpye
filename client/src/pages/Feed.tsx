@@ -42,6 +42,7 @@ import {
   Newspaper,
   ExternalLink,
   Globe,
+  Mic,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "wouter";
@@ -50,6 +51,44 @@ import { LinkPreview } from "@/components/LinkPreview";
 import { optimizeImageForUpload } from "@/lib/imageOptimization";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import VideoPlayer from "@/components/VideoPlayer";
+
+function PodcastLaunchBanner() {
+  const [dismissed, setDismissed] = useState(() =>
+    localStorage.getItem("podcast-banner-dismissed") === "true"
+  );
+  const [, setLocation] = useLocation();
+
+  if (dismissed) return null;
+
+  return (
+    <div className="relative bg-gradient-to-r from-[#191414] via-[#1a2a1a] to-[#191414] border-b border-[#1DB954]/30 px-4 py-3 flex items-center justify-between gap-3">
+      <button
+        onClick={() => setLocation("/podcast")}
+        className="flex items-center gap-3 min-w-0 flex-1 text-left"
+      >
+        <div className="w-10 h-10 bg-[#1DB954] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#1DB954]/30">
+          <Mic className="h-5 w-5 text-black" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-sm text-white">Bonpye Soccer Talk</p>
+            <span className="bg-[#1DB954] text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">NEW</span>
+          </div>
+          <p className="text-xs text-[#1DB954]/80 truncate">Our podcast launches tomorrow — tap to listen on Spotify</p>
+        </div>
+      </button>
+      <button
+        onClick={() => {
+          localStorage.setItem("podcast-banner-dismissed", "true");
+          setDismissed(true);
+        }}
+        className="p-1 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+      >
+        <X className="h-4 w-4 text-white/60" />
+      </button>
+    </div>
+  );
+}
 
 // Mock posts for display when no real posts exist
 const mockPosts = [
@@ -1044,6 +1083,9 @@ export default function Feed() {
             </div>
           </div>
         )}
+
+        {/* Podcast Launch Banner */}
+        <PodcastLaunchBanner />
 
         {/* Header */}
         <header className="sticky top-0 bg-background/95 backdrop-blur-md border-b border-border z-40">

@@ -24,6 +24,7 @@ import Clubs from "./pages/Clubs";
 import ClubDetail from "./pages/ClubDetail";
 import Matches from "./pages/Matches";
 import Scouting from "./pages/Scouting";
+import Podcast from "./pages/Podcast";
 
 function Router() {
   return (
@@ -45,6 +46,7 @@ function Router() {
       <Route path={"/settings"} component={Settings} />
       <Route path={"/verification"} component={Verification} />
       <Route path={"/player-verification"} component={PlayerVerification} />
+      <Route path={"/podcast"} component={Podcast} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
