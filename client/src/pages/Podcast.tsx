@@ -1,7 +1,7 @@
 import { ExternalLink, Music, Radio } from "lucide-react";
 
 const SPOTIFY_SHOW_ID = "6g45iCaXSobnH38YMc0ZZw";
-const hasShowId = SPOTIFY_SHOW_ID !== "YOUR_SHOW_ID_HERE";
+const hasShowId = SPOTIFY_SHOW_ID.length > 0;
 
 const TAGS = ["#FoutbòlAyisyen", "#BonpyeSoccerTalk", "#Haiti", "#Football", "#Podcast"];
 

@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { InsertUser, users, pushSubscriptions } from "../drizzle/schema";
@@ -101,7 +101,6 @@ export async function getUserByOpenId(openId: string) {
 
 // TODO: add feature queries here as your schema grows.
 
-import { desc, and, or, sql, inArray } from "drizzle-orm";
 import {
   posts, InsertPost,
   likes,

@@ -941,7 +941,7 @@ export const appRouter = router({
 
         const parseRSS = (xml: string) => {
           const items: { title: string; link: string; source: string; pubDate: string; description: string }[] = [];
-          const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/g);
+          const itemMatches = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g));
           for (const match of itemMatches) {
             const block = match[1];
             const title = block.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() || "";
