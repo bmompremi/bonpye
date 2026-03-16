@@ -53,6 +53,22 @@ async function checkExpiredVerifications() {
 }
 
 async function startServer() {
+  // Verify database connection and schema before starting
+  try {
+    const { neon } = await import('@neondatabase/serverless');
+    if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
+    const sql = neon(process.env.DATABASE_URL);
+    const rows = await sql(`SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'openId' LIMIT 1`);
+    if (rows.length === 0) {
+      console.error('[FATAL] Wrong database — "openId" column missing from users table. Check DATABASE_URL.');
+      process.exit(1);
+    }
+    console.log('[DB] Connected and schema verified');
+  } catch (err: any) {
+    console.error('[FATAL] Database check failed:', err.message);
+    process.exit(1);
+  }
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
