@@ -53,17 +53,26 @@ async function checkExpiredVerifications() {
 }
 
 async function startServer() {
-  // Verify database connection and schema before starting
+  // Verify database connection before starting
+  const REQUIRED_DB = "neondb";
+  if (!process.env.DATABASE_URL) {
+    console.error('[FATAL] DATABASE_URL not set');
+    process.exit(1);
+  }
+  const dbName = new URL(process.env.DATABASE_URL).pathname.replace("/", "").split("?")[0];
+  if (dbName !== REQUIRED_DB) {
+    console.error(`[FATAL] Wrong database: "${dbName}". BIG requires "${REQUIRED_DB}". Check DATABASE_URL.`);
+    process.exit(1);
+  }
   try {
     const { neon } = await import('@neondatabase/serverless');
-    if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
     const sql = neon(process.env.DATABASE_URL);
     const rows = await sql(`SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'openId' LIMIT 1`);
     if (rows.length === 0) {
-      console.error('[FATAL] Wrong database — "openId" column missing from users table. Check DATABASE_URL.');
+      console.error('[FATAL] Schema mismatch — "openId" column missing from users table.');
       process.exit(1);
     }
-    console.log('[DB] Connected and schema verified');
+    console.log(`[DB] Connected to "${REQUIRED_DB}" — schema verified`);
   } catch (err: any) {
     console.error('[FATAL] Database check failed:', err.message);
     process.exit(1);
