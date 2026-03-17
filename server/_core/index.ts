@@ -266,8 +266,8 @@ async function startServer() {
   }
 
   server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-    
+    console.log(`[BIG] Bonpye Internet Global running on http://localhost:${port}/`);
+
     // Run verification check immediately on startup
     checkExpiredVerifications();
     
