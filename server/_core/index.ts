@@ -135,6 +135,10 @@ async function startServer() {
       const openId = `google-${googleUser.id}`;
       const emailHandle = googleUser.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9_]/g, "") ?? "player";
 
+      // Check if user exists before upsert to detect new signups
+      const existingUser = await getUserByOpenId(openId);
+      const isNewUser = !existingUser;
+
       await upsertUser({
         openId,
         name: googleUser.name ?? null,
@@ -172,7 +176,8 @@ async function startServer() {
       if (ENV.isProduction) cookieParts.push(`Secure`);
       const cookieHeader = cookieParts.join("; ");
       res.setHeader("Set-Cookie", cookieHeader);
-      res.redirect("/feed");
+      // New users go to language selection; returning users go to feed
+      res.redirect(isNewUser || !user.language ? "/welcome" : "/feed");
     } catch (err: any) {
       console.error("[OAuth] Google callback error:", err);
       res.redirect("/?error=oauth_failed");

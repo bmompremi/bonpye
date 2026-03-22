@@ -138,6 +138,13 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    setLanguage: protectedProcedure
+      .input(z.object({ language: z.enum(["en", "fr", "ht", "es"]) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateUserLanguage(ctx.user.id, input.language);
+        return { success: true };
+      }),
+
     search: publicProcedure
       .input(z.object({ query: z.string(), limit: z.number().default(20) }))
       .query(async ({ input }) => {

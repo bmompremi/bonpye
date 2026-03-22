@@ -25,11 +25,13 @@ import ClubDetail from "./pages/ClubDetail";
 import Matches from "./pages/Matches";
 import Scouting from "./pages/Scouting";
 import Podcast from "./pages/Podcast";
+import Welcome from "./pages/Welcome";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/welcome"} component={Welcome} />
       <Route path={"/feed"} component={Feed} />
       <Route path={"/explore"} component={Explore} />
       <Route path={"/notifications"} component={Notifications} />

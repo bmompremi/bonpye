@@ -139,6 +139,12 @@ export async function updateUserProfile(userId: number, data: Partial<InsertUser
   await db.update(users).set(data).where(eq(users.id, userId));
 }
 
+export async function updateUserLanguage(userId: number, language: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ language }).where(eq(users.id, userId));
+}
+
 export async function searchUsers(query: string, limit = 20) {
   const db = await getDb();
   if (!db) return [];

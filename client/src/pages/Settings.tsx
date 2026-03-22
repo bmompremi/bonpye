@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Download,
   Eye,
+  Globe,
   HelpCircle,
   Key,
   LogOut,
@@ -42,6 +43,7 @@ type PanelKey =
   | "privacy"
   | "mute-block"
   | "display"
+  | "language"
   | "help"
   | null;
 
@@ -80,6 +82,7 @@ const settingSections = [
     title: "Display",
     items: [
       { icon: Palette, label: "Display settings", description: "Appearance and font size", panel: "display" as PanelKey },
+      { icon: Globe,   label: "Language",         description: "English, Fran\u00e7ais, Krey\u00f2l, Espa\u00f1ol", panel: "language" as PanelKey },
     ],
   },
   {
@@ -802,6 +805,62 @@ function MuteBlockPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Language Panel ────────────────────────────────────────────────────────────
+
+const LANG_OPTIONS = [
+  { code: "en", label: "English", flag: "\u{1F1FA}\u{1F1F8}" },
+  { code: "fr", label: "Fran\u00e7ais", flag: "\u{1F1EB}\u{1F1F7}" },
+  { code: "ht", label: "Krey\u00f2l", flag: "\u{1F1ED}\u{1F1F9}" },
+  { code: "es", label: "Espa\u00f1ol", flag: "\u{1F1EA}\u{1F1F8}" },
+];
+
+function LanguagePanel({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const currentLang = (user as any)?.language || "en";
+  const [selected, setSelected] = useState(currentLang);
+  const [saved, setSaved] = useState(false);
+
+  const setLanguage = trpc.user.setLanguage.useMutation({
+    onSuccess: async () => {
+      await utils.auth.me.invalidate();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast.success("Language updated");
+    },
+    onError: (e) => toast.error(e.message || "Update failed"),
+  });
+
+  const handleSave = () => {
+    setLanguage.mutate({ language: selected as "en" | "fr" | "ht" | "es" });
+  };
+
+  return (
+    <SlidePanel title="Language" onClose={onClose}>
+      <div className="max-w-lg space-y-5">
+        <p className="text-sm text-muted-foreground">Choose your preferred language for BIG.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {LANG_OPTIONS.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => setSelected(lang.code)}
+              className={`flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-colors ${
+                selected === lang.code
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-secondary/50 hover:border-primary/50"
+              }`}
+            >
+              <span className="text-2xl">{lang.flag}</span>
+              <span className="text-sm font-semibold">{lang.label}</span>
+            </button>
+          ))}
+        </div>
+        <SaveButton pending={setLanguage.isPending} done={saved} onClick={handleSave} />
+      </div>
+    </SlidePanel>
+  );
+}
+
 // ─── Main Settings page ───────────────────────────────────────────────────────
 
 export default function Settings() {
@@ -962,6 +1021,7 @@ export default function Settings() {
         {activePanel === "privacy"       && <PrivacyPanel      onClose={() => setActivePanel(null)} />}
         {activePanel === "mute-block"    && <MuteBlockPanel    onClose={() => setActivePanel(null)} />}
         {activePanel === "display"       && <DisplayPanel      onClose={() => setActivePanel(null)} />}
+        {activePanel === "language"      && <LanguagePanel     onClose={() => setActivePanel(null)} />}
         {activePanel === "help"          && <HelpPanel         onClose={() => setActivePanel(null)} />}
       </AnimatePresence>
     </div>

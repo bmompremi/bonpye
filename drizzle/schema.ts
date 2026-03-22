@@ -30,6 +30,8 @@ export const users = pgTable("users", {
   nationality: varchar("nationality", { length: 80 }),
   preferredFoot: preferredFootEnum("preferredFoot"),
   age: integer("age"),
+  // Language preference
+  language: varchar("language", { length: 10 }).default("en"),
   // Verification system
   verificationStatus: verificationStatusEnum("verificationStatus").default("pending").notNull(),
   verificationDeadline: timestamp("verificationDeadline"),
