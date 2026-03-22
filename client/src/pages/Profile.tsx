@@ -684,7 +684,7 @@ export default function Profile() {
                         </div>
                         <p className="mt-1 text-sm whitespace-pre-wrap">{post.content}</p>
                         {post.imageUrl && (
-                          <img src={post.imageUrl} alt="Post" className="mt-2 rounded-xl max-h-60 w-full object-contain border border-border" />
+                          <img src={post.imageUrl} alt="Post" className="mt-2 rounded-xl max-h-[600px] w-full object-contain border border-border" />
                         )}
                         <div className="flex gap-6 mt-2 text-muted-foreground text-xs">
                           <div className="flex items-center gap-1 hover:text-primary cursor-pointer">

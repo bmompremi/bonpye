@@ -203,7 +203,7 @@ export default function Bookmarks() {
                       <img
                         src={post.image}
                         alt="Post image"
-                        className="w-full max-h-[400px] object-cover"
+                        className="w-full max-h-[600px] object-contain"
                       />
                     </div>
                   )}
