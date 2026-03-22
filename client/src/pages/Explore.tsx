@@ -186,7 +186,7 @@ export default function Explore() {
                   </p>
                   {post.imageUrl && (
                     <div className="mt-2 rounded-xl overflow-hidden border border-border">
-                      <img src={post.imageUrl} alt="Post" className="w-full max-h-72 object-cover" />
+                      <img src={post.imageUrl} alt="Post" className="w-full max-h-[600px] object-contain" />
                     </div>
                   )}
                   {post.linkUrl && (

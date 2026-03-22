@@ -1541,7 +1541,7 @@ export default function Feed() {
                       <img
                         src={post.imageUrl}
                         alt="Post image"
-                        className="w-full rounded-2xl object-cover max-h-[500px]"
+                        className="w-full rounded-2xl object-contain max-h-[600px]"
                         decoding="async"
                         onError={(e) => {
                           const img = e.currentTarget;
