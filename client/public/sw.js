@@ -1,12 +1,20 @@
-const CACHE_NAME = 'bonpye-v1';
-const RUNTIME_CACHE = 'bonpye-runtime-v1';
+const CACHE_NAME = 'bonpye-v2';
+const RUNTIME_CACHE = 'bonpye-runtime-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(
+        names
+          .filter((n) => n !== CACHE_NAME && n !== RUNTIME_CACHE)
+          .map((n) => caches.delete(n))
+      )
+    ).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {
